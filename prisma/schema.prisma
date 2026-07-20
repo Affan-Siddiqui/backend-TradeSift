@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    String  @id @default(auto()) @map("_id") @db.ObjectId
+  email String  @unique
+  password String
+  firstName String
+  lastName String
+  organisation String?
+}
+
+model CoolDownEmail {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  email            String    @unique
+  generationCount  Int       @default(0)
+  lastGeneratedAt  DateTime?
+  cooldownStage    Int       @default(0)
+  cooldownUntil    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
