@@ -10,6 +10,7 @@ import {
   MAX_OTP_GENERATIONS_BEFORE_COOLDOWN,
   COOLDOWN_LADDER_SECONDS,
   COOLDOWN_MAX_STAGE,
+  RESET_VERIFIED_TTL_SECONDS,
 } from './auth.constants.js';
 import {
   setPendingRegistration,
@@ -28,9 +29,17 @@ import {
   setPendingLogin,
   updateTrustedDeviceLastUsed,
   createSession,
+  deleteSessionByRefreshTokenHash,
+  deleteAllSessionsForUser,
+  deleteAllTrustedDevicesForUser,
+  findUserById,
+  updateUserPassword,
+  deletePendingPasswordReset,
+  getPendingPasswordReset,
+  setPendingPasswordReset,
 } from './auth.repository.js';
-import type { RegisterInput, VerifyOtpInput, ResendOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput } from './auth.schema.js';
-import type { PendingLoginData, PendingRegistrationData } from './auth.types.js';
+import type { RegisterInput, VerifyOtpInput, ResendOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, ChangePasswordInput, ForgotPasswordInput, ForgotPasswordVerifyOtpInput, ForgotPasswordResendOtpInput, ResetPasswordInput } from './auth.schema.js';
+import type { PendingLoginData, PendingPasswordResetData, PendingRegistrationData } from './auth.types.js';
 import { CooldownType } from '@prisma/client';
 import { signAccessToken } from '../../utils/jwt.js';
 import { hashToken, generateRandomToken } from '../../utils/crypto.js';
@@ -320,4 +329,125 @@ export const verifyLoginOtp = async (input: LoginVerifyOtpInput) => {
     ...tokens,
     trustedDeviceToken: rawTrustedDeviceToken, // undefined if rememberDevice was false
   };
+};
+
+// ---------- Logout ----------
+export const logoutUser = async (refreshTokenCookie?: string): Promise<void> => {
+  if (!refreshTokenCookie) return; // nothing to revoke, treat as already logged out
+
+  const hash = hashToken(refreshTokenCookie);
+  await deleteSessionByRefreshTokenHash(hash);
+};
+
+
+// ---------- Change Password ----------
+export const changeUserPassword = async (
+  userId: string,
+  input: ChangePasswordInput
+): Promise<void> => {
+  const user = await findUserById(userId);
+  if (!user) throw new ApiError(404, 'User not found.');
+
+  const currentPasswordValid = await comparePassword(input.currentPassword, user.password);
+  if (!currentPasswordValid) throw new ApiError(401, 'Current password is incorrect.');
+
+  const newHashedPassword = await hashPassword(input.newPassword);
+
+  await updateUserPassword(userId, newHashedPassword);
+  await deleteAllSessionsForUser(userId);
+  await deleteAllTrustedDevicesForUser(userId);
+};
+
+
+// ---------- Forgot Password ----------
+export const forgotPasswordRequest = async (input: ForgotPasswordInput): Promise<void> => {
+  const user = await findUserByEmail(input.email);
+  if (!user) return; // silent no-op, generic response regardless
+
+  const cooldownRecord = await findCooldownRecord(input.email, CooldownType.FORGOT_PASSWORD);
+  if (cooldownRecord?.cooldownUntil && cooldownRecord.cooldownUntil > new Date()) {
+    return; // still silent — don't leak cooldown state either
+  }
+
+  const otp = generateOtp();
+  const now = new Date();
+
+  const pendingData: PendingPasswordResetData = {
+    userId: user.id,
+    email: user.email,
+    otp,
+    otpGeneratedAt: now.toISOString(),
+    otpExpiresAt: new Date(now.getTime() + OTP_EXPIRY_SECONDS * 1000).toISOString(),
+    verificationAttempts: 0,
+    verified: false,
+  };
+
+  await setPendingPasswordReset(input.email, pendingData);
+  await recordOtpGeneration(input.email, CooldownType.FORGOT_PASSWORD);
+  await sendOtpEmail(input.email, otp);
+};
+
+
+export const resendForgotPasswordOtp = async (input: ForgotPasswordResendOtpInput): Promise<void> => {
+  const pending = await getPendingPasswordReset(input.email);
+  if (!pending) return; // silent no-op
+
+  const secondsSinceLastOtp = (Date.now() - new Date(pending.otpGeneratedAt).getTime()) / 1000;
+  if (secondsSinceLastOtp < OTP_RESEND_INTERVAL_SECONDS) return; // silent no-op, no 429 leak either
+
+  const cooldownRecord = await findCooldownRecord(input.email, CooldownType.FORGOT_PASSWORD);
+  if (cooldownRecord?.cooldownUntil && cooldownRecord.cooldownUntil > new Date()) return;
+
+  const otp = generateOtp();
+  const now = new Date();
+
+  const updated: PendingPasswordResetData = {
+    ...pending,
+    otp,
+    otpGeneratedAt: now.toISOString(),
+    otpExpiresAt: new Date(now.getTime() + OTP_EXPIRY_SECONDS * 1000).toISOString(),
+    verificationAttempts: 0,
+    verified: false,
+  };
+
+  await setPendingPasswordReset(input.email, updated);
+  await recordOtpGeneration(input.email, CooldownType.FORGOT_PASSWORD);
+  await sendOtpEmail(input.email, otp);
+};
+
+export const verifyForgotPasswordOtp = async (input: ForgotPasswordVerifyOtpInput): Promise<void> => {
+  const pending = await getPendingPasswordReset(input.email);
+  if (!pending) throw new ApiError(400, 'Reset session expired. Please start again.');
+
+  if (new Date(pending.otpExpiresAt) < new Date()) {
+    await deletePendingPasswordReset(input.email);
+    throw new ApiError(400, 'OTP expired. Please start again.');
+  }
+
+  if (pending.otp !== input.otp) {
+    const attempts = pending.verificationAttempts + 1;
+    if (attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+      await deletePendingPasswordReset(input.email);
+      throw new ApiError(400, 'Too many incorrect attempts. Please start again.');
+    }
+    await setPendingPasswordReset(input.email, { ...pending, verificationAttempts: attempts });
+    throw new ApiError(400, 'Incorrect OTP.');
+  }
+
+  const verified: PendingPasswordResetData = { ...pending, verified: true };
+  await setPendingPasswordReset(input.email, verified, RESET_VERIFIED_TTL_SECONDS);
+};
+
+export const resetPassword = async (input: ResetPasswordInput): Promise<void> => {
+  const pending = await getPendingPasswordReset(input.email);
+  if (!pending || !pending.verified) {
+    throw new ApiError(400, 'OTP verification required before resetting password.');
+  }
+
+  const newHashedPassword = await hashPassword(input.newPassword);
+
+  await updateUserPassword(pending.userId, newHashedPassword);
+  await deleteAllSessionsForUser(pending.userId);
+  await deleteAllTrustedDevicesForUser(pending.userId);
+  await deletePendingPasswordReset(input.email);
 };

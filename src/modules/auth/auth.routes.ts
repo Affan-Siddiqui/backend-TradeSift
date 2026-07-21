@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { login, register, resendLoginOtpHandler, resendOtpHandler, verifyLoginOtpHandler, verifyOtpHandler } from './auth.controller.js';
+import { changePassword, forgotPassword, login, logout, register, resendForgotPasswordOtpHandler, resendLoginOtpHandler, resendOtpHandler, resetPasswordHandler, verifyForgotPasswordOtpHandler, verifyLoginOtpHandler, verifyOtpHandler } from './auth.controller.js';
 import { validate } from '../../middleware/validation.middleware.js';
-import { loginResendOtpSchema, loginSchema, loginVerifyOtpSchema, registerSchema, resendOtpSchema, verifyOtpSchema } from './auth.schema.js';
+import { changePasswordSchema, forgotPasswordResendOtpSchema, forgotPasswordSchema, forgotPasswordVerifyOtpSchema, loginResendOtpSchema, loginSchema, loginVerifyOtpSchema, registerSchema, resendOtpSchema, resetPasswordSchema, verifyOtpSchema } from './auth.schema.js';
+import { requireAuth } from '../../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -14,5 +15,17 @@ router.post('/register/verify-otp', validate(verifyOtpSchema), verifyOtpHandler)
 router.post('/login', validate(loginSchema), login);
 router.post('/login/resend-otp', validate(loginResendOtpSchema), resendLoginOtpHandler);
 router.post('/login/verify-otp', validate(loginVerifyOtpSchema), verifyLoginOtpHandler);
+
+// Logout route
+router.post('/logout', logout);
+
+// Change password route
+router.post('/change-password', requireAuth, validate(changePasswordSchema), changePassword);
+
+// Forgot password routes
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/forgot-password/resend-otp', validate(forgotPasswordResendOtpSchema), resendForgotPasswordOtpHandler);
+router.post('/forgot-password/verify-otp', validate(forgotPasswordVerifyOtpSchema), verifyForgotPasswordOtpHandler);
+router.post('/forgot-password/reset-password', validate(resetPasswordSchema), resetPasswordHandler);
 
 export default router;

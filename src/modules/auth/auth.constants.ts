@@ -25,3 +25,6 @@ export const COOLDOWN_LADDER_SECONDS: Record<number, number> = {
   // stage 5+ repeats at 24h — handled in service logic, not here
 };
 export const COOLDOWN_MAX_STAGE = 4; // beyond this, reuse 24h repeatedly
+
+
+export const RESET_VERIFIED_TTL_SECONDS = 5 * 60

@@ -21,3 +21,13 @@ export interface PendingLoginData {
   verificationAttempts: number;
   rememberDevice: boolean;
 }
+
+export interface PendingPasswordResetData {
+  userId: string;
+  email: string;
+  otp: string;
+  otpGeneratedAt: string;
+  otpExpiresAt: string;
+  verificationAttempts: number;
+  verified: boolean;
+}

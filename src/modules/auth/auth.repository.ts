@@ -8,7 +8,7 @@ import {
   OTP_EXPIRY_SECONDS
 
 } from './auth.constants.js';
-import type { PendingLoginData, PendingRegistrationData } from './auth.types.js';
+import type { PendingLoginData, PendingPasswordResetData, PendingRegistrationData } from './auth.types.js';
 
 // ---------- Pending Registration (Redis) ----------
 
@@ -163,4 +163,51 @@ export const createSession = async (data: {
   expiresAt: Date;
 }) => {
   return prisma.session.create({ data });
+};
+
+
+// ---------- Logout (Prisma) ----------
+export const deleteSessionByRefreshTokenHash = async (hash: string) => {
+  return prisma.session.deleteMany({ where: { refreshTokenHash: hash } });
+};
+
+
+// ---------- User (Prisma) ----------
+export const findUserById = async (id: string) => {
+  return prisma.user.findUnique({ where: { id } });
+};
+
+export const updateUserPassword = async (id: string, hashedPassword: string) => {
+  return prisma.user.update({ where: { id }, data: { password: hashedPassword } });
+};
+
+export const deleteAllSessionsForUser = async (userId: string) => {
+  return prisma.session.deleteMany({ where: { userId } });
+};
+
+export const deleteAllTrustedDevicesForUser = async (userId: string) => {
+  return prisma.trustedDevice.deleteMany({ where: { userId } });
+};
+
+
+// ---------- Pending Password Reset (Redis) ----------
+const pendingPasswordResetKey = (email: string) => `pending_password_reset:${email}`;
+
+export const setPendingPasswordReset = async (
+  email: string,
+  data: PendingPasswordResetData,
+  ttlSeconds: number = OTP_EXPIRY_SECONDS
+): Promise<void> => {
+  await redis.set(pendingPasswordResetKey(email), JSON.stringify(data), 'EX', ttlSeconds);
+};
+
+export const getPendingPasswordReset = async (
+  email: string
+): Promise<PendingPasswordResetData | null> => {
+  const raw = await redis.get(pendingPasswordResetKey(email));
+  return raw ? (JSON.parse(raw) as PendingPasswordResetData) : null;
+};
+
+export const deletePendingPasswordReset = async (email: string): Promise<void> => {
+  await redis.del(pendingPasswordResetKey(email));
 };

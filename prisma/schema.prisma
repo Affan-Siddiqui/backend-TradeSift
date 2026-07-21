@@ -19,6 +19,7 @@ model User {
 enum CooldownType {
   REGISTER
   LOGIN
+  FORGOT_PASSWORD
 }
 
 model CoolDownEmail {

@@ -1,8 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../../common/ApiResponse.js';
-import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp } from './auth.service.js';
-import type { LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, RegisterInput, ResendOtpInput, VerifyOtpInput } from './auth.schema.js';
-import { setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
+import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp, logoutUser, changeUserPassword, forgotPasswordRequest, resendForgotPasswordOtp, resetPassword, verifyForgotPasswordOtp } from './auth.service.js';
+import type { ChangePasswordInput, ForgotPasswordInput, ForgotPasswordResendOtpInput, ForgotPasswordVerifyOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, RegisterInput, ResendOtpInput, ResetPasswordInput, VerifyOtpInput } from './auth.schema.js';
+import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
+import { ApiError } from '../../common/ApiError.js';
 
 
 
@@ -97,6 +98,96 @@ export const verifyLoginOtpHandler = async (
     }
 
     res.status(200).json(new ApiResponse('Login successful.', { user: result.user }));
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// Logout controller
+export const logout = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const refreshTokenCookie = req.cookies?.refresh_token as string | undefined;
+    await logoutUser(refreshTokenCookie);
+
+    clearAuthCookies(res);
+
+    res.status(200).json(new ApiResponse('Logged out successfully.', null));
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// Change password controller
+export const changePassword = async (
+  req: Request<unknown, unknown, ChangePasswordInput> & { userId?: string },
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.userId) throw new ApiError(401, 'Authentication required.');
+
+    await changeUserPassword(req.userId, req.body);
+
+    clearAuthCookies(res);
+    res.clearCookie('trusted_device_id');
+
+    res.status(200).json(new ApiResponse('Password changed successfully. Please log in again.', null));
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// Forgot password controllers
+export const forgotPassword = async (
+  req: Request<unknown, unknown, ForgotPasswordInput>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await forgotPasswordRequest(req.body);
+    res.status(200).json(new ApiResponse('If an account exists, a code has been sent.', null));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resendForgotPasswordOtpHandler = async (
+  req: Request<unknown, unknown, ForgotPasswordResendOtpInput>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await resendForgotPasswordOtp(req.body);
+    res.status(200).json(new ApiResponse('If an account exists, a new code has been sent.', null));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyForgotPasswordOtpHandler = async (
+  req: Request<unknown, unknown, ForgotPasswordVerifyOtpInput>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await verifyForgotPasswordOtp(req.body);
+    res.status(200).json(new ApiResponse('OTP verified. You may now set a new password.', null));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPasswordHandler = async (
+  req: Request<unknown, unknown, ResetPasswordInput>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await resetPassword(req.body);
+    res.status(200).json(new ApiResponse('Password reset successfully. Please log in.', null));
   } catch (err) {
     next(err);
   }
