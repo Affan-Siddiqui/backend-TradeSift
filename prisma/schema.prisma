@@ -16,13 +16,40 @@ model User {
   organisation String?
 }
 
+enum CooldownType {
+  REGISTER
+  LOGIN
+}
+
 model CoolDownEmail {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
-  email            String    @unique
+  email            String
+  type             CooldownType
   generationCount  Int       @default(0)
   lastGeneratedAt  DateTime?
   cooldownStage    Int       @default(0)
   cooldownUntil    DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@unique([email, type])
+}
+
+model TrustedDevice {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String    @db.ObjectId
+  trustedDeviceIdHash String    @unique
+  createdAt           DateTime  @default(now())
+  lastUsedAt          DateTime  @default(now())
+  expiresAt           DateTime
+}
+
+model Session {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String         @db.ObjectId
+  refreshTokenHash String         @unique
+  trustedDeviceId  String?        @db.ObjectId
+  createdAt        DateTime       @default(now())
+  lastUsedAt       DateTime       @default(now())
+  expiresAt        DateTime
 }

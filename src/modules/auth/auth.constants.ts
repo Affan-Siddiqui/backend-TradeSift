@@ -10,6 +10,9 @@ export const OTP_MAX_VERIFY_ATTEMPTS = 3;
 export const PENDING_REGISTRATION_TTL_SECONDS = OTP_EXPIRY_SECONDS; // expires with OTP window
 export const PENDING_REGISTRATION_KEY_PREFIX = 'pending_registration:';
 
+export const PENDING_LOGIN_KEY_PREFIX = 'pending_login:';
+
+
 // Abuse / Cooldown ladder (registration OTP generation)
 export const MAX_OTP_GENERATIONS_BEFORE_COOLDOWN = 5;
 

@@ -4,8 +4,11 @@ import redis from '../../config/redis.js';
 import {
   PENDING_REGISTRATION_KEY_PREFIX,
   PENDING_REGISTRATION_TTL_SECONDS,
+  PENDING_LOGIN_KEY_PREFIX,
+  OTP_EXPIRY_SECONDS
+
 } from './auth.constants.js';
-import type { PendingRegistrationData } from './auth.types.js';
+import type { PendingLoginData, PendingRegistrationData } from './auth.types.js';
 
 // ---------- Pending Registration (Redis) ----------
 
@@ -64,12 +67,19 @@ export const createUser = async (data: {
 
 // ---------- CoolDownEmail (Prisma) ----------
 
-export const findCooldownRecord = async (email: string) => {
-  return prisma.coolDownEmail.findUnique({ where: { email } });
+import type { CooldownType } from '@prisma/client';
+
+// ---------- CoolDownEmail (Prisma) ----------
+
+export const findCooldownRecord = async (email: string, type: CooldownType) => {
+  return prisma.coolDownEmail.findUnique({
+    where: { email_type: { email, type } },
+  });
 };
 
 export const upsertCooldownRecord = async (
   email: string,
+  type: CooldownType,
   data: {
     generationCount: number;
     lastGeneratedAt: Date;
@@ -78,12 +88,79 @@ export const upsertCooldownRecord = async (
   }
 ) => {
   return prisma.coolDownEmail.upsert({
-    where: { email },
-    create: { email, ...data },
+    where: { email_type: { email, type } },
+    create: { email, type, ...data },
     update: { ...data },
   });
 };
 
-export const deleteCooldownEmail = async (email: string) => {
-  return prisma.coolDownEmail.delete({ where: { email } });
+export const deleteCooldownEmail = async (email: string, type: CooldownType) => {
+  return prisma.coolDownEmail.delete({ where: { email_type: { email, type } } });
 }
+
+
+
+// ---------- Pending Login (Redis) ----------
+
+const pendingLoginKey = (email: string) =>`${PENDING_LOGIN_KEY_PREFIX}${email}`;
+
+export const setPendingLogin = async (
+  email: string,
+  data: PendingLoginData,
+  ttlSeconds: number = OTP_EXPIRY_SECONDS
+): Promise<void> => {
+  await redis.set(pendingLoginKey(email), JSON.stringify(data), 'EX', ttlSeconds);
+};
+
+export const getPendingLogin = async (email: string): Promise<PendingLoginData | null> => {
+  const raw = await redis.get(pendingLoginKey(email));
+  return raw ? (JSON.parse(raw) as PendingLoginData) : null;
+};
+
+export const deletePendingLogin = async (email: string): Promise<void> => {
+  await redis.del(pendingLoginKey(email));
+};
+
+
+// ---------- Trusted Device (Prisma) ----------
+
+export const findTrustedDeviceByHash = async (hash: string) => {
+  return prisma.trustedDevice.findUnique({ where: { trustedDeviceIdHash: hash } });
+};
+
+export const updateTrustedDeviceLastUsed = async (id: string) => {
+  return prisma.trustedDevice.update({ where: { id }, data: { lastUsedAt: new Date() } });
+};
+
+export const createTrustedDevice = async (data: {
+  userId: string;
+  trustedDeviceIdHash: string;
+  expiresAt: Date;
+}) => {
+  return prisma.trustedDevice.create({ data });
+};
+
+export const countTrustedDevicesForUser = async (userId: string) => {
+  return prisma.trustedDevice.count({ where: { userId } });
+};
+
+export const deleteLeastRecentlyUsedTrustedDevice = async (userId: string) => {
+  const oldest = await prisma.trustedDevice.findFirst({
+    where: { userId },
+    orderBy: { lastUsedAt: 'asc' },
+  });
+  if (oldest) {
+    await prisma.trustedDevice.delete({ where: { id: oldest.id } });
+  }
+};
+
+
+// ---------- Session (Prisma) ----------
+export const createSession = async (data: {
+  userId: string;
+  refreshTokenHash: string;
+  trustedDeviceId: string | null;
+  expiresAt: Date;
+}) => {
+  return prisma.session.create({ data });
+};

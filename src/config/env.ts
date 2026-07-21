@@ -14,6 +14,8 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
 
+  
+  
   // SMTP_HOST: z.string().min(1),
   // SMTP_PORT: z.coerce.number(),
   // SMTP_USER: z.string().min(1),

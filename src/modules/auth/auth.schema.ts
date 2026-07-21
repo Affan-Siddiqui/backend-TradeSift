@@ -2,6 +2,8 @@
 import { z } from 'zod';
 import { OTP_LENGTH } from './auth.constants.js';
 
+
+// ---------- Register ----------
 export const registerSchema = z
   .object({
     firstName: z.string().trim().min(1, 'First name is required'),
@@ -36,3 +38,28 @@ export const resendOtpSchema = z.object({
 });
 
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
+
+
+
+// ---------- Login ----------
+
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+  rememberDevice: z.boolean().default(true),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const loginVerifyOtpSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  otp: z
+    .string()
+    .length(OTP_LENGTH, `OTP must be ${OTP_LENGTH} digits`)
+    .regex(/^\d+$/, 'OTP must be numeric'),
+});
+export type LoginVerifyOtpInput = z.infer<typeof loginVerifyOtpSchema>;
+
+export const loginResendOtpSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+});
+export type LoginResendOtpInput = z.infer<typeof loginResendOtpSchema>;
