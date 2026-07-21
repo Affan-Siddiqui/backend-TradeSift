@@ -3,7 +3,7 @@ import app from './app.js';
 import { env } from './config/env.js';
 import redis from './config/redis.js';
 import prisma from '../prisma/client.js';
-
+import ngrokUrl from '../ngrok'
 const startServer = async () => {
   try {
     await prisma.$connect();
@@ -19,6 +19,8 @@ const startServer = async () => {
 };
 
 startServer();
+ngrokUrl()
+
 
 process.on('SIGINT', async () => {
   await prisma.$disconnect();
