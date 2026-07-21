@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../../common/ApiResponse.js';
 import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp } from './auth.service.js';
 import type { LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, RegisterInput, ResendOtpInput, VerifyOtpInput } from './auth.schema.js';
+import { setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
 
 
 
@@ -53,8 +54,16 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const result = await loginUser(req.body);
-    res.status(200).json(new ApiResponse('Login successful.', result));
+    const trustedDeviceCookie = req.cookies?.trusted_device_id as string | undefined;
+    const result = await loginUser(req.body, trustedDeviceCookie);
+
+    if (!result.requiresOtp) {
+      setAccessTokenCookie(res, result.accessToken);
+      setRefreshTokenCookie(res, result.refreshToken);
+      return res.status(200).json(new ApiResponse('Login successful.', { user: result.user }));
+    }
+
+    res.status(200).json(new ApiResponse('OTP sent to your email.', { email: result.email }));
   } catch (err) {
     next(err);
   }
@@ -80,9 +89,15 @@ export const verifyLoginOtpHandler = async (
 ) => {
   try {
     const result = await verifyLoginOtp(req.body);
-    res.status(200).json(new ApiResponse('Login successful.', result));
+
+    setAccessTokenCookie(res, result.accessToken);
+    setRefreshTokenCookie(res, result.refreshToken);
+    if (result.trustedDeviceToken) {
+      setTrustedDeviceCookie(res, result.trustedDeviceToken);
+    }
+
+    res.status(200).json(new ApiResponse('Login successful.', { user: result.user }));
   } catch (err) {
     next(err);
   }
 };
-
