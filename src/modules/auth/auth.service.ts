@@ -37,11 +37,13 @@ import {
   deletePendingPasswordReset,
   getPendingPasswordReset,
   setPendingPasswordReset,
+  updateSessionRefreshToken,
+  findSessionByRefreshTokenHash,
 } from './auth.repository.js';
 import type { RegisterInput, VerifyOtpInput, ResendOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, ChangePasswordInput, ForgotPasswordInput, ForgotPasswordVerifyOtpInput, ForgotPasswordResendOtpInput, ResetPasswordInput } from './auth.schema.js';
 import type { PendingLoginData, PendingPasswordResetData, PendingRegistrationData } from './auth.types.js';
 import { CooldownType } from '@prisma/client';
-import { signAccessToken } from '../../utils/jwt.js';
+import { signAccessToken, verifyRefreshToken } from '../../utils/jwt.js';
 import { hashToken, generateRandomToken } from '../../utils/crypto.js';
 
 // ---------- Helpers ----------
@@ -102,6 +104,7 @@ export const registerUser = async (input: RegisterInput): Promise<{ email: strin
       ...(input.organisation !== undefined && { organisation: input.organisation }),
     email: input.email,
     hashedPassword,
+    agreedToTerms: input.agreedToTerms,
     otp,
     otpGeneratedAt: now.toISOString(),
     otpExpiresAt: new Date(now.getTime() + OTP_EXPIRY_SECONDS * 1000).toISOString(),
@@ -188,9 +191,6 @@ export const verifyOtp = async (input: VerifyOtpInput) => {
 };
 
 
-
-
-
 // ---------- Login ----------
 
 const MAX_TRUSTED_DEVICES = 5;
@@ -226,7 +226,13 @@ export const loginUser = async (input: LoginInput, trustedDeviceCookie?: string)
       const tokens = await issueSessionAndTokens(user.id, device.id);
       return {
         requiresOtp: false as const,
-        user: { id: user.id, email: user.email },
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          firstName: user.firstName, 
+          lastName: user.lastName, 
+          organisation: user.organisation 
+        },
         ...tokens,
       };
     }
@@ -330,6 +336,10 @@ export const verifyLoginOtp = async (input: LoginVerifyOtpInput) => {
     trustedDeviceToken: rawTrustedDeviceToken, // undefined if rememberDevice was false
   };
 };
+
+
+
+
 
 // ---------- Logout ----------
 export const logoutUser = async (refreshTokenCookie?: string): Promise<void> => {
@@ -450,4 +460,40 @@ export const resetPassword = async (input: ResetPasswordInput): Promise<void> =>
   await deleteAllSessionsForUser(pending.userId);
   await deleteAllTrustedDevicesForUser(pending.userId);
   await deletePendingPasswordReset(input.email);
+};
+
+
+// ---------- Refresh Token ----------
+export const rotateRefreshToken = async (refreshTokenCookie: string) => {
+  let payload;
+  try {
+    payload = verifyRefreshToken(refreshTokenCookie);
+  } catch {
+    const staleHash = hashToken(refreshTokenCookie);
+    await deleteSessionByRefreshTokenHash(staleHash);
+    throw new ApiError(401, 'Session expired. Please log in again.');
+  }
+
+  const currentHash = hashToken(refreshTokenCookie);
+  const session = await findSessionByRefreshTokenHash(currentHash);
+
+  if (!session) {
+    throw new ApiError(401, 'Session not found. Please log in again.');
+  }
+
+  if (session.expiresAt < new Date()) {
+    await deleteSessionByRefreshTokenHash(currentHash);
+    throw new ApiError(401, 'Session expired. Please log in again.');
+  }
+
+  const newAccessToken = signAccessToken({ userId: payload.userId });
+  const newRawRefreshToken = generateRandomToken();
+  const newRefreshTokenHash = hashToken(newRawRefreshToken);
+
+  await updateSessionRefreshToken(session.id, {
+    refreshTokenHash: newRefreshTokenHash,
+    expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+  });
+
+  return { accessToken: newAccessToken, refreshToken: newRawRefreshToken };
 };

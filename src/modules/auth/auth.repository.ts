@@ -43,7 +43,16 @@ export const deletePendingRegistration = async (email: string): Promise<void> =>
 // ---------- User (Prisma) ----------
 
 export const findUserByEmail = async (email: string) => {
-  return prisma.user.findUnique({ where: { email } });
+  return prisma.user.findUnique({
+    where: { email },
+    // select: {
+    //   id: true,
+    //   email: true,
+    //   firstName: true,
+    //   lastName: true,
+    //   organisation: true
+    // },
+  });
 };
 
 export const createUser = async (data: {
@@ -210,4 +219,20 @@ export const getPendingPasswordReset = async (
 
 export const deletePendingPasswordReset = async (email: string): Promise<void> => {
   await redis.del(pendingPasswordResetKey(email));
+};
+
+
+// ---------- Session (Prisma) ----------
+export const findSessionByRefreshTokenHash = async (hash: string) => {
+  return prisma.session.findUnique({ where: { refreshTokenHash: hash } });
+};
+
+export const updateSessionRefreshToken = async (
+  sessionId: string,
+  data: { refreshTokenHash: string; expiresAt: Date }
+) => {
+  return prisma.session.update({
+    where: { id: sessionId },
+    data: { ...data, lastUsedAt: new Date() },
+  });
 };

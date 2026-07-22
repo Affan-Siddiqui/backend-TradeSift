@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../../common/ApiResponse.js';
-import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp, logoutUser, changeUserPassword, forgotPasswordRequest, resendForgotPasswordOtp, resetPassword, verifyForgotPasswordOtp } from './auth.service.js';
+import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp, logoutUser, changeUserPassword, forgotPasswordRequest, resendForgotPasswordOtp, resetPassword, verifyForgotPasswordOtp, rotateRefreshToken } from './auth.service.js';
 import type { ChangePasswordInput, ForgotPasswordInput, ForgotPasswordResendOtpInput, ForgotPasswordVerifyOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, RegisterInput, ResendOtpInput, ResetPasswordInput, VerifyOtpInput } from './auth.schema.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
 import { ApiError } from '../../common/ApiError.js';
@@ -188,6 +188,24 @@ export const resetPasswordHandler = async (
   try {
     await resetPassword(req.body);
     res.status(200).json(new ApiResponse('Password reset successfully. Please log in.', null));
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// Refresh token controller
+export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const refreshTokenCookie = req.cookies?.refresh_token as string | undefined;
+    if (!refreshTokenCookie) throw new ApiError(401, 'Authentication required.');
+
+    const result = await rotateRefreshToken(refreshTokenCookie);
+
+    setAccessTokenCookie(res, result.accessToken);
+    setRefreshTokenCookie(res, result.refreshToken);
+
+    res.status(200).json(new ApiResponse('Token refreshed.', null));
   } catch (err) {
     next(err);
   }

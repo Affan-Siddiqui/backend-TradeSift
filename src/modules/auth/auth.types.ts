@@ -6,6 +6,7 @@ export interface PendingRegistrationData {
   organisation?: string;
   email: string;
   hashedPassword: string;
+  agreedToTerms: boolean; 
   otp: string;
   otpGeneratedAt: string;   // ISO timestamp
   otpExpiresAt: string;     // ISO timestamp

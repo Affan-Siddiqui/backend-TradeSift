@@ -14,6 +14,7 @@ model User {
   firstName String
   lastName String
   organisation String?
+  agreedToTermsAt DateTime @default(now())
 }
 
 enum CooldownType {
