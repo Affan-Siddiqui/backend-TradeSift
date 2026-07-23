@@ -19,7 +19,7 @@ const startServer = async () => {
 };
 
 startServer();
-ngrokUrl()
+// ngrokUrl()
 
 
 process.on('SIGINT', async () => {

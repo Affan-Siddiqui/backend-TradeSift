@@ -1,9 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../../common/ApiResponse.js';
-import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp, logoutUser, changeUserPassword, forgotPasswordRequest, resendForgotPasswordOtp, resetPassword, verifyForgotPasswordOtp, rotateRefreshToken } from './auth.service.js';
+import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp, logoutUser, changeUserPassword, forgotPasswordRequest, resendForgotPasswordOtp, resetPassword, verifyForgotPasswordOtp, rotateRefreshToken, getGoogleAuthUrl, handleGoogleCallback } from './auth.service.js';
 import type { ChangePasswordInput, ForgotPasswordInput, ForgotPasswordResendOtpInput, ForgotPasswordVerifyOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, RegisterInput, ResendOtpInput, ResetPasswordInput, VerifyOtpInput } from './auth.schema.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
 import { ApiError } from '../../common/ApiError.js';
+import { env } from '../../config/env.js';
 
 
 
@@ -102,6 +103,47 @@ export const verifyLoginOtpHandler = async (
     next(err);
   }
 };
+
+
+export const googleAuthRedirect = (req: Request, res: Response): void => {
+  const url = getGoogleAuthUrl();
+  res.redirect(url);
+};
+
+export const googleAuthCallback = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const code = req.query.code as string | undefined;
+    const error = req.query.error as string | undefined;
+
+    if (error) {
+      const redirectUrl = `${env.FRONTEND_URL}/login?error=google_denied`;
+      return res.redirect(redirectUrl);
+    }
+
+    if (!code) {
+      const redirectUrl = `${env.FRONTEND_URL}/login?error=google_auth_failed`;
+      return res.redirect(redirectUrl);
+    }
+
+    const { user, accessToken, refreshToken } = await handleGoogleCallback(code);
+
+    setAccessTokenCookie(res, accessToken);
+    setRefreshTokenCookie(res, refreshToken);
+
+    return res.redirect(`${env.FRONTEND_URL}/login?google_auth=success`);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const redirectUrl = `${env.FRONTEND_URL}/login?error=google_auth_failed`;
+      return res.redirect(redirectUrl);
+    }
+    next(err);
+  }
+};
+
 
 
 // Logout controller

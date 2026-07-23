@@ -60,7 +60,7 @@ export const createUser = async (data: {
   lastName: string;
   organisation?: string | null;
   email: string;
-  password: string; // already hashed by service layer
+  password?: string; // already hashed by service layer
 }) => {
   return prisma.user.create({ 
      data: {
@@ -68,7 +68,7 @@ export const createUser = async (data: {
       lastName: data.lastName, 
       organisation: data.organisation ?? null,
       email: data.email,
-      password: data.password,
+      password: data.password? data.password : null,
     },
    });
 };

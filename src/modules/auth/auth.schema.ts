@@ -70,7 +70,7 @@ export type LoginResendOtpInput = z.infer<typeof loginResendOtpSchema>;
 
 // ---------- Change Password ----------
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
+  currentPassword: z.string().min(1, 'Current password is required').optional(),
   newPassword: z.string().min(8, 'Password must be at least 8 characters'),
   newPasswordConfirmation: z.string(),
 }).refine((data) => data.newPassword === data.newPasswordConfirmation, {

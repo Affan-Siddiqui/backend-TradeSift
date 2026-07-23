@@ -1,3 +1,4 @@
+// auth.service.ts
 
 import { comparePassword, hashPassword } from '../../utils/hash.js';
 import { generateOtp } from '../../utils/otp.js';
@@ -45,6 +46,8 @@ import type { PendingLoginData, PendingPasswordResetData, PendingRegistrationDat
 import { CooldownType } from '@prisma/client';
 import { signAccessToken, verifyRefreshToken } from '../../utils/jwt.js';
 import { hashToken, generateRandomToken } from '../../utils/crypto.js';
+import { googleClient } from '../../config/google.js';
+import { env } from '../../config/env.js';
 
 // ---------- Helpers ----------
 
@@ -101,7 +104,7 @@ export const registerUser = async (input: RegisterInput): Promise<{ email: strin
   const pendingData: PendingRegistrationData = {
     firstName: input.firstName,
     lastName: input.lastName,
-      ...(input.organisation !== undefined && { organisation: input.organisation }),
+    ...(input.organisation !== undefined && { organisation: input.organisation }),
     email: input.email,
     hashedPassword,
     agreedToTerms: input.agreedToTerms,
@@ -214,6 +217,7 @@ export const loginUser = async (input: LoginInput, trustedDeviceCookie?: string)
   const user = await findUserByEmail(input.email);
   if (!user) throw new ApiError(401, 'Invalid credentials');
 
+  if (!user.password) throw new ApiError(401, 'Invalid credentials');
   const passwordMatches = await comparePassword(input.password, user.password);
   if (!passwordMatches) throw new ApiError(401, 'Invalid credentials');
 
@@ -226,12 +230,12 @@ export const loginUser = async (input: LoginInput, trustedDeviceCookie?: string)
       const tokens = await issueSessionAndTokens(user.id, device.id);
       return {
         requiresOtp: false as const,
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          firstName: user.firstName, 
-          lastName: user.lastName, 
-          organisation: user.organisation 
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          organisation: user.organisation
         },
         ...tokens,
       };
@@ -338,6 +342,68 @@ export const verifyLoginOtp = async (input: LoginVerifyOtpInput) => {
 };
 
 
+// ---------- Google Auth ----------
+export const getGoogleAuthUrl = (): string => {
+  return googleClient.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
+    prompt: 'consent',
+  });
+};
+
+export const handleGoogleCallback = async (code: string) => {
+  const { tokens } = await googleClient.getToken(code);
+
+  if (!tokens.id_token) {
+    throw new ApiError(400, 'Google did not return an ID token.');
+  }
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken: tokens.id_token,
+    audience: env.GOOGLE_OAUTH_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+  if (!payload?.email || !payload.sub) {
+    throw new ApiError(400, 'Invalid Google account payload.');
+  }
+
+  if (!payload.email_verified) {
+    throw new ApiError(400, 'Google account email is not verified.');
+  }
+
+  const { email, given_name, family_name } = payload;
+
+  let user = await findUserByEmail(email);
+
+  if (!user) {
+    // Brand new user
+    user = await createUser({
+      email,
+      firstName: given_name ?? 'Google',
+      lastName: family_name ?? 'User',
+    });
+  }
+
+  // Google sign-in skips OTP/trusted-device flow entirely
+  const sessionTokens = await issueSessionAndTokens(user.id);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      organisation: user.organisation || null,
+    },
+    ...sessionTokens,
+  };
+};
+
+
 
 
 
@@ -358,8 +424,11 @@ export const changeUserPassword = async (
   const user = await findUserById(userId);
   if (!user) throw new ApiError(404, 'User not found.');
 
-  const currentPasswordValid = await comparePassword(input.currentPassword, user.password);
-  if (!currentPasswordValid) throw new ApiError(401, 'Current password is incorrect.');
+  if (user.password) {
+    if (!input.currentPassword) throw new ApiError(401, 'current password needed')
+    const currentPasswordValid = await comparePassword(input.currentPassword, user.password);
+    if (!currentPasswordValid) throw new ApiError(401, 'Current password is incorrect.');
+  }
 
   const newHashedPassword = await hashPassword(input.newPassword);
 

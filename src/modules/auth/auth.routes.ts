@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { changePassword, forgotPassword, login, logout, refreshToken, register, resendForgotPasswordOtpHandler, resendLoginOtpHandler, resendOtpHandler, resetPasswordHandler, verifyForgotPasswordOtpHandler, verifyLoginOtpHandler, verifyOtpHandler } from './auth.controller.js';
+import { changePassword, forgotPassword, googleAuthCallback, googleAuthRedirect, login, logout, refreshToken, register, resendForgotPasswordOtpHandler, resendLoginOtpHandler, resendOtpHandler, resetPasswordHandler, verifyForgotPasswordOtpHandler, verifyLoginOtpHandler, verifyOtpHandler } from './auth.controller.js';
 import { validate } from '../../middleware/validation.middleware.js';
 import { changePasswordSchema, forgotPasswordResendOtpSchema, forgotPasswordSchema, forgotPasswordVerifyOtpSchema, loginResendOtpSchema, loginSchema, loginVerifyOtpSchema, registerSchema, resendOtpSchema, resetPasswordSchema, verifyOtpSchema } from './auth.schema.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
@@ -15,6 +15,10 @@ router.post('/register/verify-otp', validate(verifyOtpSchema), verifyOtpHandler)
 router.post('/login', validate(loginSchema), login);
 router.post('/login/resend-otp', validate(loginResendOtpSchema), resendLoginOtpHandler);
 router.post('/login/verify-otp', validate(loginVerifyOtpSchema), verifyLoginOtpHandler);
+
+// Google OAuth routes
+router.get('/google', googleAuthRedirect);
+router.get('/google/callback', googleAuthCallback);
 
 // Logout route
 router.post('/logout', logout);

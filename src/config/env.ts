@@ -8,18 +8,17 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
 
+  FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
+
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
 
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
 
-  
-  
-  // SMTP_HOST: z.string().min(1),
-  // SMTP_PORT: z.coerce.number(),
-  // SMTP_USER: z.string().min(1),
-  // SMTP_PASS: z.string().min(1),
+  GOOGLE_OAUTH_CLIENT_ID: z.string().min(1, 'GOOGLE_OAUTH_CLIENT_ID is required'),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1, 'GOOGLE_OAUTH_CLIENT_SECRET is required'),
+  GOOGLE_OAUTH_REDIRECT_URI: z.string().min(1, 'GOOGLE_OAUTH_REDIRECT_URI is required'),
 
   GMAIL_USER: z.string().email('GMAIL_USER must be a valid email'),
   GMAIL_APP_PASSWORD: z.string().min(1, 'GMAIL_APP_PASSWORD is required'),
