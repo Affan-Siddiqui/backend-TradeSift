@@ -120,13 +120,13 @@ export const googleAuthCallback = async (
     const error = req.query.error as string | undefined;
 
     if (error) {
-      const redirectUrl = `${env.FRONTEND_URL}/login?error=google_denied`;
-      return res.redirect(redirectUrl);
+      // user denied consent on Google's screen
+      // return res.redirect(`${env.FRONTEND_URL}/login?error=google_denied`);
+      throw new ApiError(400, `Google authentication failed: ${error}`);
     }
 
     if (!code) {
-      const redirectUrl = `${env.FRONTEND_URL}/login?error=google_auth_failed`;
-      return res.redirect(redirectUrl);
+      throw new ApiError(400, 'Missing authorization code.');
     }
 
     const { user, accessToken, refreshToken } = await handleGoogleCallback(code);
@@ -134,11 +134,12 @@ export const googleAuthCallback = async (
     setAccessTokenCookie(res, accessToken);
     setRefreshTokenCookie(res, refreshToken);
 
-    return res.redirect(`${env.FRONTEND_URL}/login?google_auth=success`);
+
+    res.status(200).json(new ApiResponse('Login successful.', { user: user }));
   } catch (err) {
     if (err instanceof ApiError) {
-      const redirectUrl = `${env.FRONTEND_URL}/login?error=google_auth_failed`;
-      return res.redirect(redirectUrl);
+      // return res.redirect(`${env.FRONTEND_URL}/login?error=google_auth_failed`);
+      throw new ApiError(err.statusCode, `Google authentication failed: ${err.message}`);
     }
     next(err);
   }
