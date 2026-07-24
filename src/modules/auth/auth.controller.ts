@@ -152,7 +152,7 @@ export const googleAuthCallback = async (
 
     if (error) {
       // user denied consent on Google's screen
-      return res.redirect(`${env.FRONTEND_URL}/login?error=${error}`);
+      return res.redirect(`${env.FRONTEND_URL}/login?error=${'google authentication was denied'}`);
       // throw new ApiError(400, `Google authentication failed: ${error}`);
     }
 
