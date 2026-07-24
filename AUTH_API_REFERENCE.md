@@ -2,9 +2,9 @@
 
 ## Base URL
 
-All endpoints are mounted under:
+All authentication endpoints are mounted under `/api/auth`.
 
-- `POST /api/auth/...`
+Most endpoints use `POST`; Google OAuth uses `GET`.
 
 The backend uses JSON request bodies and returns JSON responses.
 
@@ -50,7 +50,8 @@ Request body:
   "organisation": "string", // optional
   "email": "string",
   "password": "string",
-  "passwordConfirmation": "string"
+  "passwordConfirmation": "string",
+  "agreedToTerms": true
 }
 ```
 
@@ -69,6 +70,7 @@ Response:
 Notes:
 - Password must be at least 8 characters and include uppercase, number, and special character.
 - `passwordConfirmation` must match `password`.
+- `agreedToTerms` must be `true`.
 
 ---
 
@@ -146,7 +148,7 @@ Request body:
 {
   "email": "string",
   "password": "string",
-  "rememberDevice": true
+  "rememberDevice": false
 }
 ```
 
@@ -184,8 +186,9 @@ Cookies set:
 ```
 
 Notes:
-- If `rememberDevice` is `true`, the backend may later set a trusted device cookie on OTP verification.
-- The login flow may require a second OTP verification step.
+- If a valid `trusted_device_id` cookie exists, login may complete immediately without OTP.
+- If `rememberDevice` is `true`, the backend may later set a trusted device cookie during OTP verification.
+- The login flow may require a second `login/verify-otp` step.
 
 ---
 
@@ -250,14 +253,58 @@ Response:
 Cookies set:
 - `access_token`
 - `refresh_token`
-- `trusted_device_id` (only when the user chose to remember the device)
+- `trusted_device_id` (only when the login session requested device remember)
+
+Notes:
+- The cookie `trusted_device_id` is only created when `rememberDevice` was true during the initial `login` request.
 
 ---
 
-### 7. Logout
+### 7. Google OAuth redirect
+
+- Endpoint: `GET /api/auth/google`
+- Auth: no
+- Purpose: redirect the browser to Google OAuth consent.
+
+Response:
+- Redirects the user to Google’s OAuth consent screen.
+
+---
+
+### 8. Google OAuth callback
+
+- Endpoint: `GET /api/auth/google/callback`
+- Auth: no
+- Purpose: complete Google sign-in and create or sign in a user.
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Login successful.",
+  "data": {
+    "user": {
+      "id": "string",
+      "email": "string",
+      "firstName": "string",
+      "lastName": "string",
+      "organisation": "string | null"
+    }
+  }
+}
+```
+
+Notes:
+- Google sign-in bypasses the OTP/trusted-device flow.
+- On success, the backend sets `access_token` and `refresh_token` cookies.
+
+---
+
+### 9. Logout
 
 - Endpoint: `POST /api/auth/logout`
-- Auth: no (uses refresh cookie if present)
+- Auth: no
 - Purpose: clear auth session and cookies.
 
 Request body: none
@@ -273,11 +320,40 @@ Response:
 ```
 
 Notes:
-- The backend reads `refresh_token` cookie if present and then clears the auth cookies.
+- The backend reads the `refresh_token` cookie if present to revoke the session.
+- It always clears auth cookies after logout.
 
 ---
 
-### 8. Change password
+### 10. Refresh token
+
+- Endpoint: `POST /api/auth/refresh`
+- Auth: no
+- Purpose: renew the user's access session using the refresh token cookie.
+
+Request body: none
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed.",
+  "data": null
+}
+```
+
+Cookies set:
+- `access_token`
+- `refresh_token`
+
+Notes:
+- This endpoint requires the `refresh_token` cookie.
+- It issues a new `access_token` and a new `refresh_token`.
+
+---
+
+### 11. Change password
 
 - Endpoint: `POST /api/auth/change-password`
 - Auth: yes
@@ -287,7 +363,7 @@ Request body:
 
 ```json
 {
-  "currentPassword": "string",
+  "currentPassword": "string", // optional if the account has no existing password
   "newPassword": "string",
   "newPasswordConfirmation": "string"
 }
@@ -304,12 +380,12 @@ Response:
 ```
 
 Notes:
-- This endpoint requires `access_token` cookie.
-- After a successful password change, auth cookies are cleared and the user must log in again.
+- This endpoint requires a valid `access_token` cookie.
+- After a successful password change, all sessions and trusted devices are revoked and auth cookies are cleared.
 
 ---
 
-### 9. Forgot password request
+### 11. Forgot password request
 
 - Endpoint: `POST /api/auth/forgot-password`
 - Auth: no
@@ -333,9 +409,12 @@ Response:
 }
 ```
 
+Notes:
+- The response is intentionally generic and does not reveal whether the email exists.
+
 ---
 
-### 10. Resend forgot-password OTP
+### 12. Resend forgot-password OTP
 
 - Endpoint: `POST /api/auth/forgot-password/resend-otp`
 - Auth: no
@@ -358,11 +437,10 @@ Response:
   "data": null
 }
 ```
-```
 
 ---
 
-### 11. Verify forgot-password OTP
+### 13. Verify forgot-password OTP
 
 - Endpoint: `POST /api/auth/forgot-password/verify-otp`
 - Auth: no
@@ -389,7 +467,7 @@ Response:
 
 ---
 
-### 12. Reset password
+### 14. Reset password
 
 - Endpoint: `POST /api/auth/forgot-password/reset-password`
 - Auth: no
@@ -425,8 +503,10 @@ Response:
 
 Notes:
 - `access_token` is required for `POST /api/auth/change-password`.
+- `refresh_token` is required for `POST /api/auth/refresh` and is used by `POST /api/auth/logout` when present.
+- `trusted_device_id` is used to skip OTP when the device is trusted.
 - Set `credentials: 'include'` on frontend requests to include cookies.
-- All auth cookies are HTTP-only and cannot be read by client-side JavaScript.
+- All auth cookies are HTTP-only and not readable by client-side JavaScript.
 
 ---
 
@@ -434,9 +514,10 @@ Notes:
 
 - Use `Content-Type: application/json`.
 - Use `credentials: 'include'` for requests that depend on cookies.
+- Required cookie-based requests include `login` when a trusted device login succeeds, `login/verify-otp`, `refresh`, `logout`, and `change-password`.
 - Validate frontend forms to match backend input requirements:
   - email must be valid
-  - password rules require uppercase, number, special character
+  - password rules require uppercase, number, and special character
   - OTP must be numeric and fixed length
 
 ---
@@ -445,5 +526,8 @@ Notes:
 
 - The registration flow is two-step: `register` -> `register/verify-otp`.
 - The login flow may be either direct or OTP-based depending on trusted device state.
-- After `login/verify-otp`, the backend sets auth cookies automatically.
-- The `change-password` route clears auth cookies, so the user should be redirected to login afterwards.
+- If login does not complete immediately, the backend sends OTP and the user must call `login/verify-otp`.
+- After successful `login/verify-otp`, the backend sets `access_token` and `refresh_token` cookies, and may also set `trusted_device_id` when device trust is granted.
+- The `refresh` endpoint uses the `refresh_token` cookie to issue new `access_token` and `refresh_token` cookies.
+- The `change-password` route requires authentication and clears `access_token`, `refresh_token`, and `trusted_device_id` cookies.
+- After successful password change, the frontend should redirect the user to the login page.

@@ -1,7 +1,35 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../../common/ApiResponse.js';
-import { loginUser, resendLoginOtp, verifyLoginOtp, registerUser, resendOtp, verifyOtp, logoutUser, changeUserPassword, forgotPasswordRequest, resendForgotPasswordOtp, resetPassword, verifyForgotPasswordOtp, rotateRefreshToken, getGoogleAuthUrl, handleGoogleCallback } from './auth.service.js';
-import type { ChangePasswordInput, ForgotPasswordInput, ForgotPasswordResendOtpInput, ForgotPasswordVerifyOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, RegisterInput, ResendOtpInput, ResetPasswordInput, VerifyOtpInput } from './auth.schema.js';
+import { 
+  loginUser, 
+  resendLoginOtp,
+  verifyLoginOtp, 
+  registerUser, 
+  resendOtp,
+  verifyOtp, 
+  logoutUser, 
+  changeUserPassword, 
+  forgotPasswordRequest, 
+  resendForgotPasswordOtp, 
+  resetPassword, 
+  verifyForgotPasswordOtp, 
+  getGoogleAuthUrl, 
+  handleGoogleCallback
+} from './auth.service.js';
+import { rotateRefreshToken } from '../sessions/session.service.js';
+import type { 
+  ChangePasswordInput, 
+  ForgotPasswordInput, 
+  ForgotPasswordResendOtpInput, 
+  ForgotPasswordVerifyOtpInput, 
+  LoginInput, 
+  LoginResendOtpInput, 
+  LoginVerifyOtpInput, 
+  RegisterInput, 
+  ResendOtpInput, 
+  ResetPasswordInput, 
+  VerifyOtpInput 
+} from './auth.schema.js';
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
 import { ApiError } from '../../common/ApiError.js';
 import { env } from '../../config/env.js';
@@ -209,6 +237,7 @@ export const resendForgotPasswordOtpHandler = async (
     next(err);
   }
 };
+
 
 export const verifyForgotPasswordOtpHandler = async (
   req: Request<unknown, unknown, ForgotPasswordVerifyOtpInput>,

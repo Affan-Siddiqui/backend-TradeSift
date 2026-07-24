@@ -21,26 +21,30 @@ import {
   createUser,
   findCooldownRecord,
   upsertCooldownRecord,
-  countTrustedDevicesForUser,
-  createTrustedDevice,
-  deleteLeastRecentlyUsedTrustedDevice,
   deletePendingLogin,
-  findTrustedDeviceByHash,
   getPendingLogin,
   setPendingLogin,
-  updateTrustedDeviceLastUsed,
-  createSession,
-  deleteSessionByRefreshTokenHash,
-  deleteAllSessionsForUser,
-  deleteAllTrustedDevicesForUser,
   findUserById,
   updateUserPassword,
   deletePendingPasswordReset,
   getPendingPasswordReset,
   setPendingPasswordReset,
+} from './auth.repository.js';
+import { 
+  createSession,
+  deleteSessionByRefreshTokenHash,
+  deleteAllSessionsForUser,
   updateSessionRefreshToken,
   findSessionByRefreshTokenHash,
-} from './auth.repository.js';
+} from "../sessions/session.repository.js";
+import { 
+  countTrustedDevicesForUser,
+  createTrustedDevice,
+  deleteLeastRecentlyUsedTrustedDevice,
+  updateTrustedDeviceLastUsed,
+  deleteAllTrustedDevicesForUser,
+  findTrustedDeviceByHash,
+} from "../trusted-devices/trustedDevice.repository.js";
 import type { RegisterInput, VerifyOtpInput, ResendOtpInput, LoginInput, LoginResendOtpInput, LoginVerifyOtpInput, ChangePasswordInput, ForgotPasswordInput, ForgotPasswordVerifyOtpInput, ForgotPasswordResendOtpInput, ResetPasswordInput } from './auth.schema.js';
 import type { PendingLoginData, PendingPasswordResetData, PendingRegistrationData } from './auth.types.js';
 import { CooldownType } from '@prisma/client';
@@ -48,6 +52,8 @@ import { signAccessToken, verifyRefreshToken } from '../../utils/jwt.js';
 import { hashToken, generateRandomToken } from '../../utils/crypto.js';
 import { googleClient } from '../../config/google.js';
 import { env } from '../../config/env.js';
+import { issueSessionAndTokens } from '../sessions/session.service.js';
+import { MAX_TRUSTED_DEVICES } from '../trusted-devices/trustedDevice.constants.js';
 
 // ---------- Helpers ----------
 
@@ -195,23 +201,6 @@ export const verifyOtp = async (input: VerifyOtpInput) => {
 
 
 // ---------- Login ----------
-
-const MAX_TRUSTED_DEVICES = 5;
-
-const issueSessionAndTokens = async (userId: string, trustedDeviceId?: string) => {
-  const accessToken = signAccessToken({ userId });
-  const rawRefreshToken = generateRandomToken();
-  const refreshTokenHash = hashToken(rawRefreshToken);
-
-  await createSession({
-    userId,
-    refreshTokenHash,
-    trustedDeviceId: trustedDeviceId ?? null,
-    expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-  });
-
-  return { accessToken, refreshToken: rawRefreshToken };
-};
 
 export const loginUser = async (input: LoginInput, trustedDeviceCookie?: string) => {
   const user = await findUserByEmail(input.email);
@@ -404,9 +393,6 @@ export const handleGoogleCallback = async (code: string) => {
 };
 
 
-
-
-
 // ---------- Logout ----------
 export const logoutUser = async (refreshTokenCookie?: string): Promise<void> => {
   if (!refreshTokenCookie) return; // nothing to revoke, treat as already logged out
@@ -532,37 +518,3 @@ export const resetPassword = async (input: ResetPasswordInput): Promise<void> =>
 };
 
 
-// ---------- Refresh Token ----------
-export const rotateRefreshToken = async (refreshTokenCookie: string) => {
-  let payload;
-  try {
-    payload = verifyRefreshToken(refreshTokenCookie);
-  } catch {
-    const staleHash = hashToken(refreshTokenCookie);
-    await deleteSessionByRefreshTokenHash(staleHash);
-    throw new ApiError(401, 'Session expired. Please log in again.');
-  }
-
-  const currentHash = hashToken(refreshTokenCookie);
-  const session = await findSessionByRefreshTokenHash(currentHash);
-
-  if (!session) {
-    throw new ApiError(401, 'Session not found. Please log in again.');
-  }
-
-  if (session.expiresAt < new Date()) {
-    await deleteSessionByRefreshTokenHash(currentHash);
-    throw new ApiError(401, 'Session expired. Please log in again.');
-  }
-
-  const newAccessToken = signAccessToken({ userId: payload.userId });
-  const newRawRefreshToken = generateRandomToken();
-  const newRefreshTokenHash = hashToken(newRawRefreshToken);
-
-  await updateSessionRefreshToken(session.id, {
-    refreshTokenHash: newRefreshTokenHash,
-    expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-  });
-
-  return { accessToken: newAccessToken, refreshToken: newRawRefreshToken };
-};

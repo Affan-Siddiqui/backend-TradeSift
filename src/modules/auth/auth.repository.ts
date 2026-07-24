@@ -9,6 +9,7 @@ import {
 
 } from './auth.constants.js';
 import type { PendingLoginData, PendingPasswordResetData, PendingRegistrationData } from './auth.types.js';
+import type { CooldownType } from '@prisma/client';
 
 // ---------- Pending Registration (Redis) ----------
 
@@ -76,10 +77,6 @@ export const createUser = async (data: {
 
 // ---------- CoolDownEmail (Prisma) ----------
 
-import type { CooldownType } from '@prisma/client';
-
-// ---------- CoolDownEmail (Prisma) ----------
-
 export const findCooldownRecord = async (email: string, type: CooldownType) => {
   return prisma.coolDownEmail.findUnique({
     where: { email_type: { email, type } },
@@ -131,54 +128,6 @@ export const deletePendingLogin = async (email: string): Promise<void> => {
 };
 
 
-// ---------- Trusted Device (Prisma) ----------
-
-export const findTrustedDeviceByHash = async (hash: string) => {
-  return prisma.trustedDevice.findUnique({ where: { trustedDeviceIdHash: hash } });
-};
-
-export const updateTrustedDeviceLastUsed = async (id: string) => {
-  return prisma.trustedDevice.update({ where: { id }, data: { lastUsedAt: new Date() } });
-};
-
-export const createTrustedDevice = async (data: {
-  userId: string;
-  trustedDeviceIdHash: string;
-  expiresAt: Date;
-}) => {
-  return prisma.trustedDevice.create({ data });
-};
-
-export const countTrustedDevicesForUser = async (userId: string) => {
-  return prisma.trustedDevice.count({ where: { userId } });
-};
-
-export const deleteLeastRecentlyUsedTrustedDevice = async (userId: string) => {
-  const oldest = await prisma.trustedDevice.findFirst({
-    where: { userId },
-    orderBy: { lastUsedAt: 'asc' },
-  });
-  if (oldest) {
-    await prisma.trustedDevice.delete({ where: { id: oldest.id } });
-  }
-};
-
-
-// ---------- Session (Prisma) ----------
-export const createSession = async (data: {
-  userId: string;
-  refreshTokenHash: string;
-  trustedDeviceId: string | null;
-  expiresAt: Date;
-}) => {
-  return prisma.session.create({ data });
-};
-
-
-// ---------- Logout (Prisma) ----------
-export const deleteSessionByRefreshTokenHash = async (hash: string) => {
-  return prisma.session.deleteMany({ where: { refreshTokenHash: hash } });
-};
 
 
 // ---------- User (Prisma) ----------
@@ -188,14 +137,6 @@ export const findUserById = async (id: string) => {
 
 export const updateUserPassword = async (id: string, hashedPassword: string) => {
   return prisma.user.update({ where: { id }, data: { password: hashedPassword } });
-};
-
-export const deleteAllSessionsForUser = async (userId: string) => {
-  return prisma.session.deleteMany({ where: { userId } });
-};
-
-export const deleteAllTrustedDevicesForUser = async (userId: string) => {
-  return prisma.trustedDevice.deleteMany({ where: { userId } });
 };
 
 
@@ -221,18 +162,3 @@ export const deletePendingPasswordReset = async (email: string): Promise<void> =
   await redis.del(pendingPasswordResetKey(email));
 };
 
-
-// ---------- Session (Prisma) ----------
-export const findSessionByRefreshTokenHash = async (hash: string) => {
-  return prisma.session.findUnique({ where: { refreshTokenHash: hash } });
-};
-
-export const updateSessionRefreshToken = async (
-  sessionId: string,
-  data: { refreshTokenHash: string; expiresAt: Date }
-) => {
-  return prisma.session.update({
-    where: { id: sessionId },
-    data: { ...data, lastUsedAt: new Date() },
-  });
-};
