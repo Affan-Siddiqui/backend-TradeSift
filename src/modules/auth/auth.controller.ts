@@ -133,6 +133,9 @@ export const verifyLoginOtpHandler = async (
 };
 
 
+
+//----- GOOGLE_OAUTH
+
 export const googleAuthRedirect = (req: Request, res: Response): void => {
   const url = getGoogleAuthUrl();
   res.redirect(url);
@@ -163,7 +166,8 @@ export const googleAuthCallback = async (
     setRefreshTokenCookie(res, refreshToken);
 
 
-    res.status(200).json(new ApiResponse('Login successful.', { user: user }));
+    // res.status(200).json(new ApiResponse('Login successful.', { user: user }));
+    return res.redirect(`${env.FRONTEND_URL}/dashboard`);
   } catch (err) {
     if (err instanceof ApiError) {
       // return res.redirect(`${env.FRONTEND_URL}/login?error=google_auth_failed`);
