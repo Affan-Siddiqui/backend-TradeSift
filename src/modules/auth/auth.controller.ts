@@ -152,8 +152,8 @@ export const googleAuthCallback = async (
 
     if (error) {
       // user denied consent on Google's screen
-      // return res.redirect(`${env.FRONTEND_URL}/login?error=google_denied`);
-      throw new ApiError(400, `Google authentication failed: ${error}`);
+      return res.redirect(`${env.FRONTEND_URL}/login?error=${error}`);
+      // throw new ApiError(400, `Google authentication failed: ${error}`);
     }
 
     if (!code) {
@@ -170,8 +170,8 @@ export const googleAuthCallback = async (
     return res.redirect(`${env.FRONTEND_URL}/dashboard`);
   } catch (err) {
     if (err instanceof ApiError) {
-      // return res.redirect(`${env.FRONTEND_URL}/login?error=google_auth_failed`);
-      throw new ApiError(err.statusCode, `Google authentication failed: ${err.message}`);
+      return res.redirect(`${env.FRONTEND_URL}/login?error=${err.message}`);
+      // throw new ApiError(err.statusCode, `Google authentication failed: ${err.message}`);
     }
     next(err);
   }
