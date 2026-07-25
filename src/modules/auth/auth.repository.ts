@@ -162,3 +162,6 @@ export const deletePendingPasswordReset = async (email: string): Promise<void> =
   await redis.del(pendingPasswordResetKey(email));
 };
 
+export const deleteAllCooldownRecords = async () => {
+  return prisma.coolDownEmail.deleteMany({});
+}; 

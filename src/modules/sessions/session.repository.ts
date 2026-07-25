@@ -31,4 +31,6 @@ export const updateSessionRefreshToken = async (
   });
 };
 
-
+export const deleteAllSessionsGlobally = async () => {
+  return prisma.session.deleteMany({});
+};

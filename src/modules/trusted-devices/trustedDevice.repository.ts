@@ -35,3 +35,7 @@ export const deleteLeastRecentlyUsedTrustedDevice = async (userId: string) => {
 export const deleteAllTrustedDevicesForUser = async (userId: string) => {
   return prisma.trustedDevice.deleteMany({ where: { userId } });
 };
+
+export const deleteAllTrustedDevicesGlobally = async () => {
+  return prisma.trustedDevice.deleteMany({});
+};
