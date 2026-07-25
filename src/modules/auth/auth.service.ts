@@ -455,10 +455,15 @@ export const forgotPasswordRequest = async (input: ForgotPasswordInput): Promise
 
 export const resendForgotPasswordOtp = async (input: ForgotPasswordResendOtpInput): Promise<void> => {
   const pending = await getPendingPasswordReset(input.email);
-  if (!pending) return; // silent no-op
+  if (!pending) {
+    throw new ApiError(400, 'Reset session expired. Please start again.');
+  }
 
   const secondsSinceLastOtp = (Date.now() - new Date(pending.otpGeneratedAt).getTime()) / 1000;
-  if (secondsSinceLastOtp < OTP_RESEND_INTERVAL_SECONDS) return; // silent no-op, no 429 leak either
+  if (secondsSinceLastOtp < OTP_RESEND_INTERVAL_SECONDS) {
+    throw new ApiError(429, 'Too many requests. Please try again later.');
+  }
+  // return; // silent no-op, no 429 leak either
 
   const cooldownRecord = await findCooldownRecord(input.email, CooldownType.FORGOT_PASSWORD);
   if (cooldownRecord?.cooldownUntil && cooldownRecord.cooldownUntil > new Date()) return;

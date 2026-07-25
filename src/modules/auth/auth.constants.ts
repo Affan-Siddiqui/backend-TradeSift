@@ -3,7 +3,7 @@
 // OTP
 export const OTP_LENGTH = 6;
 export const OTP_EXPIRY_SECONDS = 5 * 60; // 5 minutes
-export const OTP_RESEND_INTERVAL_SECONDS = 120; // 2 minutes
+export const OTP_RESEND_INTERVAL_SECONDS = 30; // 30 seconds
 export const OTP_MAX_VERIFY_ATTEMPTS = 3;
 
 // Pending registration (Redis)
