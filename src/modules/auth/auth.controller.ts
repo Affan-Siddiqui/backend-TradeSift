@@ -33,6 +33,7 @@ import type {
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie, setTrustedDeviceCookie } from '../../utils/cookies.js';
 import { ApiError } from '../../common/ApiError.js';
 import { env } from '../../config/env.js';
+import { log } from 'node:console';
 
 
 
@@ -273,7 +274,9 @@ export const resetPasswordHandler = async (
 // Refresh token controller
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    log('Refresh token request received.');
     const refreshTokenCookie = req.cookies?.refresh_token as string | undefined;
+    log('Refresh token from cookie:', refreshTokenCookie);
     if (!refreshTokenCookie) throw new ApiError(401, 'Authentication required.');
 
     const result = await rotateRefreshToken(refreshTokenCookie);
