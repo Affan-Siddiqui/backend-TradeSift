@@ -7,7 +7,13 @@ export const findTrustedDeviceByHash = async (hash: string) => {
 };
 
 export const updateTrustedDeviceLastUsed = async (id: string) => {
-  return prisma.trustedDevice.update({ where: { id }, data: { lastUsedAt: new Date() } });
+  return prisma.trustedDevice.update({ 
+    where: { id }, 
+    data: { 
+      lastUsedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    } 
+  });
 };
 
 export const createTrustedDevice = async (data: {

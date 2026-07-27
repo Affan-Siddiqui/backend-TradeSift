@@ -1,0 +1,2 @@
+
+export const MAX_CONCURRENT_SESSIONS = 8;

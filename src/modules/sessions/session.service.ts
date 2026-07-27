@@ -1,9 +1,15 @@
 import { ApiError } from "../../common/ApiError.js";
 import { generateRandomToken, hashToken } from "../../utils/crypto.js";
 import { signAccessToken, verifyRefreshToken } from "../../utils/jwt.js";
-import { createSession, deleteSessionByRefreshTokenHash, findSessionByRefreshTokenHash, updateSessionRefreshToken } from "./session.repository.js";
+import { MAX_CONCURRENT_SESSIONS } from "./session.constants.js";
+import { countSessionsForUser, createSession, deleteLeastRecentlyUsedSession, deleteSessionByRefreshTokenHash, findSessionByRefreshTokenHash, updateSessionRefreshToken } from "./session.repository.js";
 
 export const issueSessionAndTokens = async (userId: string, trustedDeviceId?: string) => {
+  const sessionCount = await countSessionsForUser(userId);
+  if (sessionCount >= MAX_CONCURRENT_SESSIONS) {
+    await deleteLeastRecentlyUsedSession(userId);
+  }
+  
   const accessToken = signAccessToken({ userId });
   const rawRefreshToken = generateRandomToken();
   const refreshTokenHash = hashToken(rawRefreshToken);

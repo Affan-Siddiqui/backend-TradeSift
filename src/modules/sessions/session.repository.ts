@@ -31,6 +31,20 @@ export const updateSessionRefreshToken = async (
   });
 };
 
+export const countSessionsForUser = async (userId: string) => {
+  return prisma.session.count({ where: { userId } });
+};
+
+export const deleteLeastRecentlyUsedSession = async (userId: string) => {
+  const oldest = await prisma.session.findFirst({
+    where: { userId },
+    orderBy: { lastUsedAt: 'asc' },
+  });
+  if (oldest) {
+    await prisma.session.delete({ where: { id: oldest.id } });
+  }
+};
+
 export const deleteAllSessionsGlobally = async () => {
   return prisma.session.deleteMany({});
 };
