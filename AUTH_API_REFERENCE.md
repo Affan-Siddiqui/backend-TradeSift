@@ -6,7 +6,7 @@ All authentication endpoints are mounted under `/api/auth`.
 
 Most endpoints use `POST`; Google OAuth uses `GET`.
 
-The backend uses JSON request bodies and returns JSON responses.
+The backend uses JSON request bodies and returns JSON responses, except the Google callback route which redirects the browser.
 
 ---
 
@@ -68,9 +68,10 @@ Response:
 ```
 
 Notes:
-- Password must be at least 8 characters and include uppercase, number, and special character.
+- Password must be at least 8 characters and include an uppercase letter, a number, and a special character.
 - `passwordConfirmation` must match `password`.
 - `agreedToTerms` must be `true`.
+- The registration OTP expires in 5 minutes.
 
 ---
 
@@ -99,6 +100,9 @@ Response:
   }
 }
 ```
+
+Notes:
+- OTP resend requests are rate limited. Clients should wait at least 30 seconds between resend attempts.
 
 ---
 
@@ -133,6 +137,10 @@ Response:
   }
 }
 ```
+
+Notes:
+- Registration is finalized only after OTP verification.
+- Incorrect OTP attempts are limited.
 
 ---
 
@@ -189,6 +197,7 @@ Notes:
 - If a valid `trusted_device_id` cookie exists, login may complete immediately without OTP.
 - If `rememberDevice` is `true`, the backend may later set a trusted device cookie during OTP verification.
 - The login flow may require a second `login/verify-otp` step.
+- The direct trusted-device login user object may include additional profile fields when available.
 
 ---
 
@@ -217,6 +226,9 @@ Response:
   }
 }
 ```
+
+Notes:
+- OTP resend requests are rate limited. Clients should wait at least 30 seconds between resend attempts.
 
 ---
 
@@ -257,6 +269,7 @@ Cookies set:
 
 Notes:
 - The cookie `trusted_device_id` is only created when `rememberDevice` was true during the initial `login` request.
+- Incorrect OTP attempts are limited and can expire the pending login session.
 
 ---
 
@@ -277,27 +290,13 @@ Response:
 - Auth: no
 - Purpose: complete Google sign-in and create or sign in a user.
 
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Login successful.",
-  "data": {
-    "user": {
-      "id": "string",
-      "email": "string",
-      "firstName": "string",
-      "lastName": "string",
-      "organisation": "string | null"
-    }
-  }
-}
-```
+Behavior:
+- On success, the backend sets `access_token` and `refresh_token` cookies and redirects the browser to the frontend dashboard.
+- On error, the backend redirects to the frontend login page with an error query parameter.
 
 Notes:
 - Google sign-in bypasses the OTP/trusted-device flow.
-- On success, the backend sets `access_token` and `refresh_token` cookies.
+- This endpoint does not return JSON in the current implementation; it uses redirects.
 
 ---
 
@@ -350,6 +349,7 @@ Cookies set:
 Notes:
 - This endpoint requires the `refresh_token` cookie.
 - It issues a new `access_token` and a new `refresh_token`.
+- If the refresh token is invalid or expired, the session is revoked and the client must log in again.
 
 ---
 
@@ -381,11 +381,12 @@ Response:
 
 Notes:
 - This endpoint requires a valid `access_token` cookie.
+- If the user has an existing password, `currentPassword` is required.
 - After a successful password change, all sessions and trusted devices are revoked and auth cookies are cleared.
 
 ---
 
-### 11. Forgot password request
+### 12. Forgot password request
 
 - Endpoint: `POST /api/auth/forgot-password`
 - Auth: no
@@ -414,7 +415,7 @@ Notes:
 
 ---
 
-### 12. Resend forgot-password OTP
+### 13. Resend forgot-password OTP
 
 - Endpoint: `POST /api/auth/forgot-password/resend-otp`
 - Auth: no
@@ -438,9 +439,13 @@ Response:
 }
 ```
 
+Notes:
+- The response remains generic even if the email is not associated with an account.
+- OTP resend is rate limited and may reject too-frequent requests.
+
 ---
 
-### 13. Verify forgot-password OTP
+### 14. Verify forgot-password OTP
 
 - Endpoint: `POST /api/auth/forgot-password/verify-otp`
 - Auth: no
@@ -465,9 +470,12 @@ Response:
 }
 ```
 
+Notes:
+- OTP verification enables the next step and preserves the pending password reset session for a short time.
+
 ---
 
-### 14. Reset password
+### 15. Reset password
 
 - Endpoint: `POST /api/auth/forgot-password/reset-password`
 - Auth: no
@@ -493,6 +501,155 @@ Response:
 }
 ```
 
+Notes:
+- This endpoint requires a previously verified forgot-password OTP session.
+- After reset, all sessions and trusted devices for the account are revoked.
+
+---
+
+## User endpoints
+
+### 1. Get current profile
+
+- Endpoint: `GET /api/users/me`
+- Auth: yes
+- Purpose: fetch the authenticated user's profile.
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Profile fetched.",
+  "data": {
+    "id": "string",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "organisation": "string | null"
+  }
+}
+```
+
+Notes:
+- Requires a valid `access_token` cookie.
+- Returns a sanitized user object without the password.
+
+---
+
+### 2. Update current profile
+
+- Endpoint: `PATCH /api/users/me`
+- Auth: yes
+- Purpose: update the authenticated user's allowed profile fields.
+
+Request body:
+
+```json
+{
+  "firstName": "string", // optional
+  "lastName": "string", // optional
+  "organisation": "string" // optional
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Profile updated.",
+  "data": {
+    "id": "string",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "organisation": "string | null"
+  }
+}
+```
+
+Notes:
+- Requires a valid `access_token` cookie.
+- Only the provided fields are updated.
+
+---
+
+### 3. Delete current account
+
+- Endpoint: `DELETE /api/users/me`
+- Auth: yes
+- Purpose: delete the authenticated user's account and clear auth cookies.
+
+Request body: none
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Account deleted.",
+  "data": null
+}
+```
+
+Notes:
+- Requires a valid `access_token` cookie.
+- Deletes the user account and associated sessions/trusted devices.
+- Clears `access_token`, `refresh_token`, and `trusted_device_id` cookies.
+
+---
+
+### 4. Get all users (development only)
+
+- Endpoint: `GET /api/users/`
+- Auth: no
+- Purpose: retrieve all user accounts for testing.
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "All users fetched.",
+  "data": [
+    {
+      "id": "string",
+      "email": "string",
+      "firstName": "string",
+      "lastName": "string",
+      "organisation": "string | null"
+    }
+  ]
+}
+```
+
+Notes:
+- Available only when `NODE_ENV !== 'production'`.
+- This route is intended for development/testing only.
+
+---
+
+### 5. Delete all users (development only)
+
+- Endpoint: `DELETE /api/users/`
+- Auth: no
+- Purpose: delete all user accounts and related test data.
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "All users deleted.",
+  "data": null
+}
+```
+
+Notes:
+- Available only when `NODE_ENV !== 'production'`.
+- Deletes all users, sessions, trusted devices, and cooldown records.
+
 ---
 
 ## Cookies used by frontend
@@ -507,6 +664,7 @@ Notes:
 - `trusted_device_id` is used to skip OTP when the device is trusted.
 - Set `credentials: 'include'` on frontend requests to include cookies.
 - All auth cookies are HTTP-only and not readable by client-side JavaScript.
+- Cookies are set with `SameSite=Lax` and `Secure` in production.
 
 ---
 
@@ -531,3 +689,4 @@ Notes:
 - The `refresh` endpoint uses the `refresh_token` cookie to issue new `access_token` and `refresh_token` cookies.
 - The `change-password` route requires authentication and clears `access_token`, `refresh_token`, and `trusted_device_id` cookies.
 - After successful password change, the frontend should redirect the user to the login page.
+- Google OAuth uses redirect-based completion; the callback does not return a JSON payload in the current code.
