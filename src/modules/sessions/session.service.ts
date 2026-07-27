@@ -1,6 +1,7 @@
 import { ApiError } from "../../common/ApiError.js";
 import { generateRandomToken, hashToken } from "../../utils/crypto.js";
 import { signAccessToken, verifyRefreshToken } from "../../utils/jwt.js";
+import logger from '../../config/logger.js';
 import { MAX_CONCURRENT_SESSIONS } from "./session.constants.js";
 import { countSessionsForUser, createSession, deleteLeastRecentlyUsedSession, deleteSessionByRefreshTokenHash, findSessionByRefreshTokenHash, updateSessionRefreshToken } from "./session.repository.js";
 
@@ -20,6 +21,7 @@ export const issueSessionAndTokens = async (userId: string, trustedDeviceId?: st
     trustedDeviceId: trustedDeviceId ?? null,
     expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
   });
+  logger.info({ userId, trustedDeviceId }, 'Session created');
 
   return { accessToken, refreshToken: rawRefreshToken };
 };
@@ -30,9 +32,10 @@ export const rotateRefreshToken = async (refreshTokenCookie: string) => {
   let payload;
   try {
     payload = verifyRefreshToken(refreshTokenCookie);
-  } catch {
+  } catch (err) {
     const staleHash = hashToken(refreshTokenCookie);
     await deleteSessionByRefreshTokenHash(staleHash);
+    logger.warn({ err }, 'Refresh token verification failed');
     throw new ApiError(401, 'Session expired. Please log in again.');
   }
 

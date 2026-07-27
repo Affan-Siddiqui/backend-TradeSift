@@ -3,17 +3,19 @@ import app from './app.js';
 import { env } from './config/env.js';
 import redis from './config/redis.js';
 import prisma from '../prisma/client.js';
-import ngrokUrl from '../ngrok.js'
+import ngrokUrl from '../ngrok.js';
+import logger from './config/logger.js';
+
 const startServer = async () => {
   try {
     await prisma.$connect();
-    console.log('✅ Database connected');
+    logger.info('Database connected');
 
     app.listen(env.PORT, () => {
-      console.log(`🚀 Server running on port ${env.PORT} [${env.NODE_ENV}]`);
+      logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server running');
     });
   } catch (err) {
-    console.error('❌ Failed to start server:', err);
+    logger.error({ err }, 'Failed to start server');
     process.exit(1);
   }
 };

@@ -5,11 +5,13 @@ import { errorMiddleware } from './middleware/error.middleware.js';
 import { notFoundMiddleware } from './middleware/notFound.middleware.js';
 import cors from 'cors';
 import { env } from './config/env.js';
+import { requestLogger } from './middleware/requestLogger.middleware.js';
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(requestLogger);
 
 app.use (cors({
   credentials: true,

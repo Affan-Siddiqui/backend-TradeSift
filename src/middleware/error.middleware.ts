@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../common/ApiError.js';
+import logger from '../config/logger.js';
 
 export const errorMiddleware = (
   err: unknown,
@@ -14,7 +15,7 @@ export const errorMiddleware = (
     });
   }
 
-  console.error('Unexpected error:', err);
+  logger.error({ err }, 'Unexpected error');
 
   return res.status(500).json({
     success: false,

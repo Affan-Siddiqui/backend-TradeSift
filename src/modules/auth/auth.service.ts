@@ -52,6 +52,7 @@ import { signAccessToken, verifyRefreshToken } from '../../utils/jwt.js';
 import { hashToken, generateRandomToken } from '../../utils/crypto.js';
 import { googleClient } from '../../config/google.js';
 import { env } from '../../config/env.js';
+import logger from '../../config/logger.js';
 import { issueSessionAndTokens } from '../sessions/session.service.js';
 import { MAX_TRUSTED_DEVICES } from '../trusted-devices/trustedDevice.constants.js';
 
@@ -123,6 +124,7 @@ export const registerUser = async (input: RegisterInput): Promise<{ email: strin
   await setPendingRegistration(input.email, pendingData);
   await recordOtpGeneration(input.email, CooldownType.REGISTER);
   await sendOtpEmail(input.email, otp);
+  logger.info({ email: input.email }, 'Registration OTP sent');
 
   return { email: input.email };
 };
@@ -156,6 +158,7 @@ export const resendOtp = async (input: ResendOtpInput): Promise<{ email: string 
   await setPendingRegistration(input.email, updated);
   await recordOtpGeneration(input.email, CooldownType.REGISTER);
   await sendOtpEmail(input.email, otp);
+  logger.info({ email: input.email }, 'Registration OTP resent');
 
   return { email: input.email };
 };
@@ -195,6 +198,7 @@ export const verifyOtp = async (input: VerifyOtpInput) => {
   const { password, ...userWithoutPassword } = user;
 
   await deletePendingRegistration(input.email);
+  logger.info({ userId: user.id, email: pending.email }, 'User registered');
 
   return userWithoutPassword;
 };
@@ -217,6 +221,7 @@ export const loginUser = async (input: LoginInput, trustedDeviceCookie?: string)
     if (device && device.userId === user.id && device.expiresAt > new Date()) {
       await updateTrustedDeviceLastUsed(device.id);
       const tokens = await issueSessionAndTokens(user.id, device.id);
+      logger.info({ userId: user.id, trustedDeviceId: device.id }, 'Trusted device login');
       return {
         requiresOtp: false as const,
         user: {
@@ -250,6 +255,7 @@ export const loginUser = async (input: LoginInput, trustedDeviceCookie?: string)
   await setPendingLogin(input.email, pendingData);
   await recordOtpGeneration(input.email, CooldownType.LOGIN);
   await sendOtpEmail(input.email, otp);
+  logger.info({ userId: user.id, email: input.email }, 'Login OTP sent');
 
   return { requiresOtp: true as const, email: input.email };
 };
