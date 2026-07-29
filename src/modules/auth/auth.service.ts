@@ -200,7 +200,26 @@ export const verifyOtp = async (input: VerifyOtpInput) => {
   await deletePendingRegistration(input.email);
   logger.info({ userId: user.id, email: pending.email }, 'User registered');
 
-  return userWithoutPassword;
+  // --- Trusted-device creation (mirrors verifyLoginOtp) ---
+  const deviceCount = await countTrustedDevicesForUser(user.id);
+  if (deviceCount >= MAX_TRUSTED_DEVICES) {
+    await deleteLeastRecentlyUsedTrustedDevice(user.id);
+  }
+
+  const rawTrustedDeviceToken = generateRandomToken();
+  const device = await createTrustedDevice({
+    userId: user.id,
+    trustedDeviceIdHash: hashToken(rawTrustedDeviceToken),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
+
+  const tokens = await issueSessionAndTokens(user.id, device.id);
+
+  return {
+    ...userWithoutPassword,
+    ...tokens,
+    trustedDeviceToken: rawTrustedDeviceToken,
+  };
 };
 
 

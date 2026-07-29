@@ -71,7 +71,14 @@ export const verifyOtpHandler = async (
 ) => {
   try {
     const result = await verifyOtp(req.body);
-    res.status(201).json(new ApiResponse('Registration complete.', result));
+
+    setAccessTokenCookie(res, result.accessToken);
+    setRefreshTokenCookie(res, result.refreshToken);
+    if (result.trustedDeviceToken) {
+      setTrustedDeviceCookie(res, result.trustedDeviceToken);
+    }
+
+    res.status(201).json(new ApiResponse('Registration complete.', { user: result }));
   } catch (err) {
     next(err);
   }
