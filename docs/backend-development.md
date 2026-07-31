@@ -123,7 +123,7 @@ Implemented the Document Management module for uploading and listing operational
 
 **Design Decisions:**
 1. **Placeholder Storage:** Documents are not yet uploaded to external storage. Multer uses memory storage, and the backend generates a `temp_<uuid>` placeholder for the `storageKey`. This decouples the business logic from Cloudinary (which will be added in Phase 3).
-2. **File Validation:** Configurable max size of 10MB and strict MIME type checking (PDF, JPEG, JPG, PNG) is enforced via Multer.
+2. **File Validation:** Configurable max size of 10MB and strict MIME type checking (PDF, Word, Excel, and various Image formats like JPG, PNG, TIFF) is enforced via Multer.
 3. **Route Nesting vs Root:** The upload and list operations are nested under `operation.routes.ts` (`/:id/documents`) because they conceptually map an action on an Operation, while fetch/delete actions are mapped directly to `/documents/:id` in `document.routes.ts`.
 
 #### Phase 2 Refactor — Multiple Document Uploads

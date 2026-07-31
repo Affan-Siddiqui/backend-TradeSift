@@ -976,7 +976,7 @@ Request format: `multipart/form-data`
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| files | file | yes | The files to upload (Max 20 files, Max 10MB per file). Allowed types: PDF, JPG, JPEG, PNG. |
+| files | file | yes | The files to upload (Max 20 files, Max 10MB per file). Allowed types: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), and Images (JPG, JPEG, PNG, GIF, WEBP, BMP, TIFF, SVG, HEIC, HEIF). |
 
 Response (201):
 
