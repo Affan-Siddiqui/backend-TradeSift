@@ -833,6 +833,7 @@ Error responses:
 
 | Status | Reason |
 |--------|--------|
+| 400 | Invalid Operation ID format (must be 24-char hex) |
 | 401 | Authentication required |
 | 404 | Operation not found or does not belong to the authenticated user |
 
@@ -892,7 +893,7 @@ Error responses:
 
 | Status | Reason |
 |--------|--------|
-| 400 | Invalid status transition (e.g., trying to cancel an already cancelled operation) |
+| 400 | Invalid status transition or Invalid Operation ID format |
 | 401 | Authentication required |
 | 404 | Operation not found or does not belong to the authenticated user |
 
@@ -931,6 +932,7 @@ Error responses:
 
 | Status | Reason |
 |--------|--------|
+| 400 | Invalid Operation ID format (must be 24-char hex) |
 | 401 | Authentication required |
 | 404 | Operation not found or does not belong to the authenticated user |
 
