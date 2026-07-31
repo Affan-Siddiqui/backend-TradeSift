@@ -135,11 +135,39 @@ Implemented the Document Management module for uploading and listing operational
 **Recommendations (Future):**
 - Add soft deletes and scheduled deletion cron tasks for orphaned documents or expired operations.
 
+### Phase 3 — Storage Layer
+**Completed:** July 2026
+
+**Summary:** 
+Implemented a reusable Storage Layer to handle document uploads, removing the temporary memory placeholder from Phase 2. Cloudinary is integrated as the first storage provider, but the architecture abstracts it away so the Document module remains provider-independent.
+
+**Files Added:**
+- `src/integrations/storage/storage.types.ts`
+- `src/integrations/storage/cloudinary.provider.ts`
+- `src/integrations/storage/storage.service.ts`
+
+**Files Modified:**
+- `prisma/schema.prisma` (Added `StorageProvider` enum and `storageProvider` field to `Document`)
+- `src/config/env.ts` (Added Cloudinary credentials)
+- `src/modules/documents/document.repository.ts` (Updated inserts to include `storageProvider`)
+- `src/modules/documents/document.service.ts` (Updated `uploadDocuments` and `deleteExistingDocument` to use `StorageService`)
+
+**Database Changes:**
+- **`StorageProvider`** enum added (currently only `CLOUDINARY`).
+- **`storageProvider`** field added to `Document` (defaults to `CLOUDINARY`).
+
+**Design Decisions:**
+1. **Provider Independence:** The Document module only communicates with `StorageService`, which implements the `IStorageProvider` contract. Cloudinary specific implementation is completely encapsulated in `cloudinary.provider.ts`.
+2. **Metadata Storage:** Instead of storing delivery URLs, we store the provider-specific `storageKey` (e.g., Cloudinary `public_id`). Delivery URLs can be generated dynamically if needed, avoiding provider lock-in and handling deleted/migrated assets gracefully.
+3. **Graceful Deletion:** Deleting a document first removes it from the storage provider, and only upon success deletes the database record, avoiding orphaned files.
+
+**Recommendations (Future):**
+- Add soft deletes and scheduled deletion cron tasks for orphaned documents or expired operations.
+
 ---
 
 ## 6. Future Phases & Next Steps
 
-- **Phase 3 (Storage):** Implement Cloudinary integration to replace placeholder storage.
 - **AI Processing Layer:** Integration with external AI processing queues (document classification, data extraction).
 - **Audit Logging:** Every operation mutation (create, update, delete) will eventually emit an audit event.
 - **Soft Deletes:** Implement an ADR-compliant deletion policy (adding `deletedAt` and background cron cleanup).

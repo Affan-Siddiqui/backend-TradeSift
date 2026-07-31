@@ -1,7 +1,7 @@
 // document.repository.ts
 
 import prisma from '../../../prisma/client.js';
-import type { DocumentUploadStatus } from '@prisma/client';
+import type { DocumentUploadStatus, StorageProvider } from '@prisma/client';
 
 export const createDocument = async (data: {
   operationId: string;
@@ -9,6 +9,7 @@ export const createDocument = async (data: {
   originalFileName: string;
   mimeType: string;
   fileSize: number;
+  storageProvider: StorageProvider;
   storageKey: string;
   uploadStatus: DocumentUploadStatus;
 }) => {
@@ -23,6 +24,7 @@ export const createMultipleDocuments = async (dataArray: {
   originalFileName: string;
   mimeType: string;
   fileSize: number;
+  storageProvider: StorageProvider;
   storageKey: string;
   uploadStatus: DocumentUploadStatus;
 }[]) => {

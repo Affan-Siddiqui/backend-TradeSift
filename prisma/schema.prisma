@@ -87,6 +87,10 @@ enum DocumentUploadStatus {
   FAILED
 }
 
+enum StorageProvider {
+  CLOUDINARY
+}
+
 model Document {
   id               String               @id @default(auto()) @map("_id") @db.ObjectId
   operationId      String               @db.ObjectId
@@ -94,6 +98,7 @@ model Document {
   originalFileName String
   mimeType         String
   fileSize         Int
+  storageProvider  StorageProvider      @default(CLOUDINARY)
   storageKey       String               @unique
   uploadStatus     DocumentUploadStatus @default(UPLOADING)
   createdAt        DateTime             @default(now())

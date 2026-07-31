@@ -9,6 +9,7 @@ import {
   deleteDocumentById,
 } from './document.repository.js';
 import { findOperationById } from '../operations/operation.repository.js';
+import { StorageService } from '../../integrations/storage/storage.service.js';
 import type { SafeDocument } from './document.types.js';
 import type { Document } from '@prisma/client';
 
@@ -57,18 +58,34 @@ export const uploadDocuments = async (
   // 1. Verify operation ownership
   await verifyOperationOwnership(userId, operationId);
 
-  // 2. Prepare document data for atomic insertion
-  const documentDataArray = files.map((file) => ({
+  // 2. Upload files to StorageProvider
+  const uploadedFiles = await Promise.all(
+    files.map(async (file) => {
+      const { publicId } = await StorageService.uploadDocument(
+        file.buffer,
+        file.mimetype,
+        file.originalname
+      );
+      return {
+        file,
+        publicId,
+      };
+    })
+  );
+
+  // 3. Prepare document data for atomic insertion
+  const documentDataArray = uploadedFiles.map(({ file, publicId }) => ({
     operationId,
     userId,
     originalFileName: file.originalname,
     mimeType: file.mimetype,
     fileSize: file.size,
-    storageKey: `temp_${randomUUID()}`, // Phase 3 will use real storage
-    uploadStatus: 'UPLOADED' as const, // Simulated as immediately successful since we use memory storage
+    storageProvider: 'CLOUDINARY' as const,
+    storageKey: publicId,
+    uploadStatus: 'UPLOADED' as const,
   }));
 
-  // 3. Create document records atomically
+  // 4. Create document records atomically
   const documents = await createMultipleDocuments(documentDataArray);
 
   return documents.map(toSafeDocument);
@@ -96,9 +113,11 @@ export const getDocument = async (userId: string, documentId: string): Promise<S
 // ---------- Delete ----------
 
 export const deleteExistingDocument = async (userId: string, documentId: string): Promise<void> => {
-  await findOwnedDocument(userId, documentId);
+  const document = await findOwnedDocument(userId, documentId);
   
-  // Phase 3 note: Actual storage deletion (e.g. Cloudinary) should happen here
+  // Delete from StorageProvider first
+  await StorageService.deleteDocument(document.storageKey);
   
+  // Then delete from database
   await deleteDocumentById(documentId);
 };

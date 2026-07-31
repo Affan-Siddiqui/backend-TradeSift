@@ -1008,8 +1008,8 @@ Error responses:
 | 404 | Operation not found or does not belong to the authenticated user |
 
 Notes:
-- The backend uses a temporary local memory placeholder. The documents are not yet stored externally (Phase 2 limitation).
 - Uses Prisma transactions. If any file fails validation, no documents are created.
+- (Phase 3 Update): The document is uploaded securely to an external storage provider (Cloudinary). The API response structure remains unchanged; delivery URLs are generated internally by the backend when needed.
 
 ---
 
