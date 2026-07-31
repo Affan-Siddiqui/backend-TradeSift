@@ -11,6 +11,8 @@ import {
   updateOperation,
   deleteOperation,
 } from './operation.controller.js';
+import { upload } from '../../middleware/upload.middleware.js';
+import { createDocumentHandler, listDocumentsHandler } from '../documents/document.controller.js';
 
 const router = Router();
 
@@ -19,5 +21,9 @@ router.get('/', requireAuth, validateQuery(listOperationsQuerySchema), listUserO
 router.get('/:id', requireAuth, validateParams(operationIdParamSchema), getOperationById);
 router.patch('/:id', requireAuth, validateParams(operationIdParamSchema), validate(updateOperationSchema), updateOperation);
 router.delete('/:id', requireAuth, validateParams(operationIdParamSchema), deleteOperation);
+
+// Document endpoints nested under operation
+router.post('/:id/documents', requireAuth, validateParams(operationIdParamSchema), upload.single('file'), createDocumentHandler);
+router.get('/:id/documents', requireAuth, validateParams(operationIdParamSchema), listDocumentsHandler);
 
 export default router;

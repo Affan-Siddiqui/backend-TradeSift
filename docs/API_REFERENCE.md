@@ -950,3 +950,181 @@ Notes:
 - To cancel an operation, use `PATCH /api/operations/:id` with `{ "status": "CANCELLED" }`.
 - Pagination defaults to page 1 with 10 items per page. Maximum page size is 50.
 - The list endpoint supports filtering by `operationType` and `status` via query parameters.
+
+---
+
+## Document endpoints
+
+Document endpoints require authentication (`access_token` cookie).
+Documents are scoped to operations. Users can only access documents for operations they own.
+
+---
+
+### 1. Upload document
+
+- Endpoint: `POST /api/operations/:id/documents`
+- Auth: yes
+- Purpose: Upload a document to a specific operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Request format: `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| file | file | yes | The file to upload (Max 10MB). Allowed types: PDF, JPG, JPEG, PNG. |
+
+Response (201):
+
+```json
+{
+  "success": true,
+  "message": "Document uploaded successfully.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "originalFileName": "string",
+    "mimeType": "string",
+    "fileSize": 12345,
+    "uploadStatus": "UPLOADED",
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format, No file uploaded, File too large, or Invalid file type |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+
+Notes:
+- The backend uses a temporary local memory placeholder. The document is not yet stored externally (Phase 2 limitation).
+
+---
+
+### 2. List documents for operation
+
+- Endpoint: `GET /api/operations/:id/documents`
+- Auth: yes
+- Purpose: Retrieve all documents associated with an operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Documents fetched.",
+  "data": {
+    "documents": [
+      {
+        "id": "string",
+        "operationId": "string",
+        "originalFileName": "string",
+        "mimeType": "string",
+        "fileSize": 12345,
+        "uploadStatus": "UPLOADED",
+        "createdAt": "string",
+        "updatedAt": "string"
+      }
+    ]
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+
+---
+
+### 3. Get document
+
+- Endpoint: `GET /api/documents/:id`
+- Auth: yes
+- Purpose: Retrieve a specific document's metadata.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Document ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Document fetched.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "originalFileName": "string",
+    "mimeType": "string",
+    "fileSize": 12345,
+    "uploadStatus": "UPLOADED",
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Document ID format |
+| 401 | Authentication required |
+| 404 | Document not found or does not belong to the authenticated user |
+
+---
+
+### 4. Delete document
+
+- Endpoint: `DELETE /api/documents/:id`
+- Auth: yes
+- Purpose: Delete a specific document's metadata.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Document ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Document deleted.",
+  "data": null
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Document ID format |
+| 401 | Authentication required |
+| 404 | Document not found or does not belong to the authenticated user |
+
+Notes:
+- The actual file storage deletion will be implemented in Phase 3. Currently, it only deletes the metadata from the database.

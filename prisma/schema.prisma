@@ -78,4 +78,26 @@ model Operation {
   notes          String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  documents      Document[]
+}
+
+enum DocumentUploadStatus {
+  UPLOADING
+  UPLOADED
+  FAILED
+}
+
+model Document {
+  id               String               @id @default(auto()) @map("_id") @db.ObjectId
+  operationId      String               @db.ObjectId
+  userId           String               @db.ObjectId
+  originalFileName String
+  mimeType         String
+  fileSize         Int
+  storageKey       String               @unique
+  uploadStatus     DocumentUploadStatus @default(UPLOADING)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  operation        Operation            @relation(fields: [operationId], references: [id], onDelete: Cascade)
 }

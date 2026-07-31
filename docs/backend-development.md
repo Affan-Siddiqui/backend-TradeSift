@@ -96,13 +96,44 @@ Implemented the Operations module — the primary business entity in TradeSift. 
 1. **Ownership returns 404:** When a user tries to access another user's operation, the API returns `404 Not Found` rather than `403 Forbidden` to prevent information leakage.
 2. **MongoDB ObjectID Validation:** A `validateParams()` middleware was added to enforce strict 24-character hex regex validation on `:id` routes. This prevents Prisma from throwing `500 P2023` errors when malformed IDs are provided.
 3. **Enum Forward-Planning:** The `OperationStatus` Prisma enum includes `PROCESSING`, `REVIEW`, and `COMPLETED` for future phases, even though Phase 1 only uses `DRAFT` and `CANCELLED`.
-4. **Status Transitions:** Services enforce strict transition rules. Phase 1 only permits `DRAFT → CANCELLED`.
+### Phase 2 — Document Management
+**Completed:** July 2026
+
+**Summary:** 
+Implemented the Document Management module for uploading and listing operational documents. Multer memory storage is used along with a temporary `temp_<uuid>` storageKey to prepare for Phase 3 external storage.
+
+**Files Added:**
+- `src/middleware/upload.middleware.ts`
+- `src/modules/documents/*` (constants, types, schema, repository, service, controller, routes)
+
+**Files Modified:**
+- `prisma/schema.prisma` (Added `Document` and `DocumentUploadStatus`)
+- `src/modules/operations/operation.routes.ts` (Added nested document routes)
+- `src/routes/index.ts` (Mounted `/documents`)
+
+**Database Changes:**
+- **`Document`** model added with relation to `Operation`.
+- **`DocumentUploadStatus`** enum added (`UPLOADING`, `UPLOADED`, `FAILED`).
+
+**Routes Added:**
+- `POST /api/operations/:id/documents` — Upload a document to an operation (multipart/form-data).
+- `GET /api/operations/:id/documents` — List documents for an operation.
+- `GET /api/documents/:id` — Get document metadata.
+- `DELETE /api/documents/:id` — Delete document metadata.
+
+**Design Decisions:**
+1. **Placeholder Storage:** Documents are not yet uploaded to external storage. Multer uses memory storage, and the backend generates a `temp_<uuid>` placeholder for the `storageKey`. This decouples the business logic from Cloudinary (which will be added in Phase 3).
+2. **File Validation:** Configurable max size of 10MB and strict MIME type checking (PDF, JPEG, JPG, PNG) is enforced via Multer.
+3. **Route Nesting vs Root:** The upload and list operations are nested under `operation.routes.ts` (`/:id/documents`) because they conceptually map an action on an Operation, while fetch/delete actions are mapped directly to `/documents/:id` in `document.routes.ts`.
+
+**Recommendations (Future):**
+- Add soft deletes and scheduled deletion cron tasks for orphaned documents or expired operations.
 
 ---
 
 ## 6. Future Phases & Next Steps
 
-- **Phase 2 (Documents):** Will introduce a `Document` collection related to the `Operation` model. 
+- **Phase 3 (Storage):** Implement Cloudinary integration to replace placeholder storage.
 - **AI Processing Layer:** Integration with external AI processing queues (document classification, data extraction).
 - **Audit Logging:** Every operation mutation (create, update, delete) will eventually emit an audit event.
 - **Soft Deletes:** Implement an ADR-compliant deletion policy (adding `deletedAt` and background cron cleanup).
