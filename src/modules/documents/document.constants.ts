@@ -8,3 +8,5 @@ export const ALLOWED_MIME_TYPES = [
   'image/jpg',
   'image/png'
 ];
+
+export const MAX_UPLOAD_FILES = 20;

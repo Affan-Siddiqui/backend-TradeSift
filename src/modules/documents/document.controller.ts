@@ -5,7 +5,7 @@ import { ApiResponse } from '../../common/ApiResponse.js';
 import { ApiError } from '../../common/ApiError.js';
 import type { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import {
-  uploadDocument,
+  uploadDocuments,
   listOperationDocuments,
   getDocument,
   deleteExistingDocument,
@@ -16,13 +16,14 @@ export const createDocumentHandler = async (req: AuthenticatedRequest, res: Resp
     if (!req.userId) throw new ApiError(401, 'Authentication required.');
     const { id: operationId } = req.params as { id: string }; // From /operations/:id/documents
     
-    if (!req.file) {
-      throw new ApiError(400, 'No file uploaded');
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      throw new ApiError(400, 'No files uploaded');
     }
 
-    const document = await uploadDocument(req.userId, operationId, req.file);
+    const documents = await uploadDocuments(req.userId, operationId, files);
 
-    res.status(201).json(new ApiResponse('Document uploaded successfully.', document));
+    res.status(201).json(new ApiResponse('Documents uploaded successfully.', documents));
   } catch (err) {
     next(err);
   }

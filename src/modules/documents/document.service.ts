@@ -3,7 +3,7 @@
 import { randomUUID } from 'crypto';
 import { ApiError } from '../../common/ApiError.js';
 import {
-  createDocument,
+  createMultipleDocuments,
   findDocumentsByOperationId,
   findDocumentById,
   deleteDocumentById,
@@ -49,29 +49,29 @@ const findOwnedDocument = async (userId: string, documentId: string): Promise<Do
 
 // ---------- Create (Upload) ----------
 
-export const uploadDocument = async (
+export const uploadDocuments = async (
   userId: string,
   operationId: string,
-  file: Express.Multer.File
-): Promise<SafeDocument> => {
+  files: Express.Multer.File[]
+): Promise<SafeDocument[]> => {
   // 1. Verify operation ownership
   await verifyOperationOwnership(userId, operationId);
 
-  // 2. Generate temporary storage key (Phase 3 will use real storage)
-  const storageKey = `temp_${randomUUID()}`;
-
-  // 3. Create document record
-  const document = await createDocument({
+  // 2. Prepare document data for atomic insertion
+  const documentDataArray = files.map((file) => ({
     operationId,
     userId,
     originalFileName: file.originalname,
     mimeType: file.mimetype,
     fileSize: file.size,
-    storageKey,
-    uploadStatus: 'UPLOADED', // Simulated as immediately successful since we use memory storage
-  });
+    storageKey: `temp_${randomUUID()}`, // Phase 3 will use real storage
+    uploadStatus: 'UPLOADED' as const, // Simulated as immediately successful since we use memory storage
+  }));
 
-  return toSafeDocument(document);
+  // 3. Create document records atomically
+  const documents = await createMultipleDocuments(documentDataArray);
+
+  return documents.map(toSafeDocument);
 };
 
 // ---------- List ----------

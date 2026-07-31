@@ -17,6 +17,20 @@ export const createDocument = async (data: {
   });
 };
 
+export const createMultipleDocuments = async (dataArray: {
+  operationId: string;
+  userId: string;
+  originalFileName: string;
+  mimeType: string;
+  fileSize: number;
+  storageKey: string;
+  uploadStatus: DocumentUploadStatus;
+}[]) => {
+  return prisma.$transaction(
+    dataArray.map((data) => prisma.document.create({ data }))
+  );
+};
+
 export const findDocumentsByOperationId = async (operationId: string) => {
   return prisma.document.findMany({
     where: { operationId },

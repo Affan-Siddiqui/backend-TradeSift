@@ -29,16 +29,6 @@ export const issueSessionAndTokens = async (userId: string, trustedDeviceId?: st
 
 // ---------- Refresh Token ----------
 export const rotateRefreshToken = async (refreshTokenCookie: string) => {
-  let payload;
-  try {
-    payload = verifyRefreshToken(refreshTokenCookie);
-  } catch (err) {
-    const staleHash = hashToken(refreshTokenCookie);
-    await deleteSessionByRefreshTokenHash(staleHash);
-    logger.warn({ err }, 'Refresh token verification failed');
-    throw new ApiError(401, 'Session expired. Please log in again.');
-  }
-
   const currentHash = hashToken(refreshTokenCookie);
   const session = await findSessionByRefreshTokenHash(currentHash);
 
@@ -51,7 +41,7 @@ export const rotateRefreshToken = async (refreshTokenCookie: string) => {
     throw new ApiError(401, 'Session expired. Please log in again.');
   }
 
-  const newAccessToken = signAccessToken({ userId: payload.userId });
+  const newAccessToken = signAccessToken({ userId: session.userId });
   const newRawRefreshToken = generateRandomToken();
   const newRefreshTokenHash = hashToken(newRawRefreshToken);
 

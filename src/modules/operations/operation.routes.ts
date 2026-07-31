@@ -13,6 +13,7 @@ import {
 } from './operation.controller.js';
 import { upload } from '../../middleware/upload.middleware.js';
 import { createDocumentHandler, listDocumentsHandler } from '../documents/document.controller.js';
+import { MAX_UPLOAD_FILES } from '../documents/document.constants.js';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.patch('/:id', requireAuth, validateParams(operationIdParamSchema), valida
 router.delete('/:id', requireAuth, validateParams(operationIdParamSchema), deleteOperation);
 
 // Document endpoints nested under operation
-router.post('/:id/documents', requireAuth, validateParams(operationIdParamSchema), upload.single('file'), createDocumentHandler);
+router.post('/:id/documents', requireAuth, validateParams(operationIdParamSchema), upload.array('files', MAX_UPLOAD_FILES), createDocumentHandler);
 router.get('/:id/documents', requireAuth, validateParams(operationIdParamSchema), listDocumentsHandler);
 
 export default router;

@@ -960,11 +960,11 @@ Documents are scoped to operations. Users can only access documents for operatio
 
 ---
 
-### 1. Upload document
+### 1. Upload documents
 
 - Endpoint: `POST /api/operations/:id/documents`
 - Auth: yes
-- Purpose: Upload a document to a specific operation.
+- Purpose: Upload one or more documents to a specific operation.
 
 Path parameters:
 
@@ -976,24 +976,26 @@ Request format: `multipart/form-data`
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| file | file | yes | The file to upload (Max 10MB). Allowed types: PDF, JPG, JPEG, PNG. |
+| files | file | yes | The files to upload (Max 20 files, Max 10MB per file). Allowed types: PDF, JPG, JPEG, PNG. |
 
 Response (201):
 
 ```json
 {
   "success": true,
-  "message": "Document uploaded successfully.",
-  "data": {
-    "id": "string",
-    "operationId": "string",
-    "originalFileName": "string",
-    "mimeType": "string",
-    "fileSize": 12345,
-    "uploadStatus": "UPLOADED",
-    "createdAt": "string",
-    "updatedAt": "string"
-  }
+  "message": "Documents uploaded successfully.",
+  "data": [
+    {
+      "id": "string",
+      "operationId": "string",
+      "originalFileName": "string",
+      "mimeType": "string",
+      "fileSize": 12345,
+      "uploadStatus": "UPLOADED",
+      "createdAt": "string",
+      "updatedAt": "string"
+    }
+  ]
 }
 ```
 
@@ -1001,12 +1003,13 @@ Error responses:
 
 | Status | Reason |
 |--------|--------|
-| 400 | Invalid Operation ID format, No file uploaded, File too large, or Invalid file type |
+| 400 | Invalid Operation ID format, No files uploaded, File too large, or Invalid file type |
 | 401 | Authentication required |
 | 404 | Operation not found or does not belong to the authenticated user |
 
 Notes:
-- The backend uses a temporary local memory placeholder. The document is not yet stored externally (Phase 2 limitation).
+- The backend uses a temporary local memory placeholder. The documents are not yet stored externally (Phase 2 limitation).
+- Uses Prisma transactions. If any file fails validation, no documents are created.
 
 ---
 

@@ -126,6 +126,12 @@ Implemented the Document Management module for uploading and listing operational
 2. **File Validation:** Configurable max size of 10MB and strict MIME type checking (PDF, JPEG, JPG, PNG) is enforced via Multer.
 3. **Route Nesting vs Root:** The upload and list operations are nested under `operation.routes.ts` (`/:id/documents`) because they conceptually map an action on an Operation, while fetch/delete actions are mapped directly to `/documents/:id` in `document.routes.ts`.
 
+#### Phase 2 Refactor — Multiple Document Uploads
+- Refactored the `POST /api/operations/:id/documents` endpoint to accept an array of files (`files`).
+- Replaced `upload.single('file')` with `upload.array('files', 20)`.
+- Introduced a Prisma transaction (`$transaction`) in the Repository layer to ensure atomic creation of all documents in the batch.
+- The endpoint now returns an array of safely created document metadata instead of a single object.
+
 **Recommendations (Future):**
 - Add soft deletes and scheduled deletion cron tasks for orphaned documents or expired operations.
 
