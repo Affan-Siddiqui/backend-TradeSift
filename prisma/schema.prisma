@@ -55,3 +55,27 @@ model Session {
   lastUsedAt       DateTime       @default(now())
   expiresAt        DateTime
 }
+
+enum OperationType {
+  GATE_IN
+  GATE_OUT
+}
+
+enum OperationStatus {
+  DRAFT
+  PROCESSING
+  REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+model Operation {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String          @db.ObjectId
+  operationType  OperationType
+  status         OperationStatus @default(DRAFT)
+  referenceNo    String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}

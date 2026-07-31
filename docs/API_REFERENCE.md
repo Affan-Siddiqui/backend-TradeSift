@@ -690,3 +690,261 @@ Notes:
 - The `change-password` route requires authentication and clears `access_token`, `refresh_token`, and `trusted_device_id` cookies.
 - After successful password change, the frontend should redirect the user to the login page.
 - Google OAuth uses redirect-based completion; the callback does not return a JSON payload in the current code.
+
+---
+
+## Operation endpoints
+
+All operation endpoints are mounted under `/api/operations`.
+
+All operation endpoints require authentication (`access_token` cookie).
+
+Operations are scoped to the authenticated user. Users can only access their own operations.
+
+---
+
+### 1. Create operation
+
+- Endpoint: `POST /api/operations`
+- Auth: yes
+- Purpose: create a new operation (Gate-In or Gate-Out).
+
+Request body:
+
+```json
+{
+  "operationType": "GATE_IN",
+  "referenceNo": "string",
+  "notes": "string"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| operationType | string | yes | Must be `GATE_IN` or `GATE_OUT` |
+| referenceNo | string | no | Optional terminal reference number |
+| notes | string | no | Optional free-text notes |
+
+Response (201):
+
+```json
+{
+  "success": true,
+  "message": "Operation created.",
+  "data": {
+    "id": "string",
+    "userId": "string",
+    "operationType": "GATE_IN",
+    "status": "DRAFT",
+    "referenceNo": "string | null",
+    "notes": "string | null",
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Notes:
+- Operations are always created with status `DRAFT`.
+- The `operationType` field cannot be changed after creation.
+
+---
+
+### 2. List operations
+
+- Endpoint: `GET /api/operations`
+- Auth: yes
+- Purpose: retrieve a paginated list of the authenticated user's operations.
+
+Query parameters:
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| page | number | 1 | Page number (1-based) |
+| limit | number | 10 | Items per page (max 50) |
+| operationType | string | — | Filter by `GATE_IN` or `GATE_OUT` |
+| status | string | — | Filter by `DRAFT`, `PROCESSING`, `REVIEW`, `COMPLETED`, or `CANCELLED` |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Operations fetched.",
+  "data": {
+    "operations": [
+      {
+        "id": "string",
+        "userId": "string",
+        "operationType": "GATE_IN",
+        "status": "DRAFT",
+        "referenceNo": "string | null",
+        "notes": "string | null",
+        "createdAt": "string",
+        "updatedAt": "string"
+      }
+    ],
+    "total": 25,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 3
+  }
+}
+```
+
+Notes:
+- Results are ordered by `createdAt` descending (newest first).
+- Only the authenticated user's operations are returned.
+
+---
+
+### 3. Get operation
+
+- Endpoint: `GET /api/operations/:id`
+- Auth: yes
+- Purpose: retrieve a single operation by ID.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Operation fetched.",
+  "data": {
+    "id": "string",
+    "userId": "string",
+    "operationType": "GATE_IN",
+    "status": "DRAFT",
+    "referenceNo": "string | null",
+    "notes": "string | null",
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+
+Notes:
+- Returns `404` for both non-existent and non-owned operations to prevent information leakage.
+
+---
+
+### 4. Update operation
+
+- Endpoint: `PATCH /api/operations/:id`
+- Auth: yes
+- Purpose: update operation metadata or cancel the operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Request body:
+
+```json
+{
+  "referenceNo": "string",
+  "notes": "string",
+  "status": "CANCELLED"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| referenceNo | string | no | Updated reference number |
+| notes | string | no | Updated notes |
+| status | string | no | Can only be set to `CANCELLED` (Phase 1) |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Operation updated.",
+  "data": {
+    "id": "string",
+    "userId": "string",
+    "operationType": "GATE_IN",
+    "status": "CANCELLED",
+    "referenceNo": "string | null",
+    "notes": "string | null",
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid status transition (e.g., trying to cancel an already cancelled operation) |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+
+Validation rules:
+- `status` can only be set to `CANCELLED`.
+- Status transitions are validated: only `DRAFT` → `CANCELLED` is allowed in Phase 1.
+- `referenceNo` must be non-empty if provided.
+
+---
+
+### 5. Delete operation
+
+- Endpoint: `DELETE /api/operations/:id`
+- Auth: yes
+- Purpose: permanently delete an operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Request body: none
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Operation deleted.",
+  "data": null
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+
+Notes:
+- This performs a hard delete. The operation and its data are permanently removed.
+- Future phases may introduce soft delete with scheduled cleanup.
+
+---
+
+## Notes for frontend developers (operations)
+
+- All operation endpoints require the `access_token` cookie. Use `credentials: 'include'` on requests.
+- Operations are user-scoped. The backend automatically filters by the authenticated user — no `userId` parameter is needed in requests.
+- The `operationType` is set at creation and cannot be changed.
+- To cancel an operation, use `PATCH /api/operations/:id` with `{ "status": "CANCELLED" }`.
+- Pagination defaults to page 1 with 10 items per page. Maximum page size is 50.
+- The list endpoint supports filtering by `operationType` and `status` via query parameters.
