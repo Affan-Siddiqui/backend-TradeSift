@@ -21,6 +21,7 @@ const toSafeDocument = (doc: Document): SafeDocument => ({
   originalFileName: doc.originalFileName,
   mimeType: doc.mimeType,
   fileSize: doc.fileSize,
+  url: StorageService.getDocumentUrl(doc.storageKey),
   uploadStatus: doc.uploadStatus,
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt,

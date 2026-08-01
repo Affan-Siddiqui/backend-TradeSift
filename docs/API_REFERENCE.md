@@ -991,6 +991,7 @@ Response (201):
       "originalFileName": "string",
       "mimeType": "string",
       "fileSize": 12345,
+      "url": "string",
       "uploadStatus": "UPLOADED",
       "createdAt": "string",
       "updatedAt": "string"
@@ -1039,6 +1040,7 @@ Response (200):
         "originalFileName": "string",
         "mimeType": "string",
         "fileSize": 12345,
+        "url": "string",
         "uploadStatus": "UPLOADED",
         "createdAt": "string",
         "updatedAt": "string"
@@ -1082,6 +1084,7 @@ Response (200):
     "originalFileName": "string",
     "mimeType": "string",
     "fileSize": 12345,
+    "url": "string",
     "uploadStatus": "UPLOADED",
     "createdAt": "string",
     "updatedAt": "string"
@@ -1130,4 +1133,444 @@ Error responses:
 | 404 | Document not found or does not belong to the authenticated user |
 
 Notes:
-- The actual file storage deletion will be implemented in Phase 3. Currently, it only deletes the metadata from the database.
+- Deletes both the database metadata and the external file from Cloudinary (implemented in Phase 3).
+
+---
+
+## E. Processing
+
+### 1. Start Processing
+
+- Endpoint: `POST /api/operations/:id/process`
+- Auth: yes
+- Purpose: Create and queue a processing job for the operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (201):
+
+```json
+{
+  "success": true,
+  "message": "Processing job queued successfully.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "userId": "string",
+    "status": "QUEUED",
+    "progress": 0,
+    "startedAt": null,
+    "completedAt": null,
+    "failedAt": null,
+    "errorMessage": null,
+    "retryCount": 0,
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format or no uploaded documents exist |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+| 409 | An active processing job already exists for this operation |
+| 500 | Failed to enqueue processing job |
+
+---
+
+### 2. Get Operation Processing Status
+
+- Endpoint: `GET /api/operations/:id/processing-status`
+- Auth: yes
+- Purpose: Retrieve the latest processing status for a given operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Processing status fetched.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "userId": "string",
+    "status": "COMPLETED",
+    "progress": 100,
+    "currentStage": "Done",
+    "estimatedCompletion": null,
+    "stages": {
+      "ocr": "Completed",
+      "extraction": "Completed",
+      "validation": "Completed"
+    },
+    "startedAt": "string",
+    "completedAt": "string",
+    "failedAt": null,
+    "errorMessage": null,
+    "retryCount": 0,
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format |
+| 401 | Authentication required |
+| 404 | Operation not found, does not belong to user, or no processing jobs exist |
+        "url": "string",
+        "uploadStatus": "UPLOADED",
+        "createdAt": "string",
+        "updatedAt": "string"
+      }
+    ]
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+
+---
+
+### 3. Get document
+
+- Endpoint: `GET /api/documents/:id`
+- Auth: yes
+- Purpose: Retrieve a specific document's metadata.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Document ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Document fetched.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "originalFileName": "string",
+    "mimeType": "string",
+    "fileSize": 12345,
+    "url": "string",
+    "uploadStatus": "UPLOADED",
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Document ID format |
+| 401 | Authentication required |
+| 404 | Document not found or does not belong to the authenticated user |
+
+---
+
+### 4. Delete document
+
+- Endpoint: `DELETE /api/documents/:id`
+- Auth: yes
+- Purpose: Delete a specific document's metadata.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Document ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Document deleted.",
+  "data": null
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Document ID format |
+| 401 | Authentication required |
+| 404 | Document not found or does not belong to the authenticated user |
+
+Notes:
+- Deletes both the database metadata and the external file from Cloudinary (implemented in Phase 3).
+
+---
+
+## E. Processing
+
+### 1. Start Processing
+
+- Endpoint: `POST /api/operations/:id/process`
+- Auth: yes
+- Purpose: Create and queue a processing job for the operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (201):
+
+```json
+{
+  "success": true,
+  "message": "Processing job queued successfully.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "userId": "string",
+    "status": "QUEUED",
+    "progress": 0,
+    "startedAt": null,
+    "completedAt": null,
+    "failedAt": null,
+    "errorMessage": null,
+    "retryCount": 0,
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format or no uploaded documents exist |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the authenticated user |
+| 409 | An active processing job already exists for this operation |
+| 500 | Failed to enqueue processing job |
+
+---
+
+### 2. Get Operation Processing Status
+
+- Endpoint: `GET /api/operations/:id/processing-status`
+- Auth: yes
+- Purpose: Retrieve the latest processing status for a given operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Processing status fetched.",
+  "data": {
+    "id": "string",
+    "operationId": "string",
+    "userId": "string",
+    "status": "COMPLETED",
+    "progress": 100,
+    "currentStage": "Done",
+    "estimatedCompletion": null,
+    "stages": {
+      "ocr": "Completed",
+      "extraction": "Completed",
+      "validation": "Completed"
+    },
+    "startedAt": "string",
+    "completedAt": "string",
+    "failedAt": null,
+    "errorMessage": null,
+    "retryCount": 0,
+    "createdAt": "string",
+    "updatedAt": "string"
+  }
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format |
+| 401 | Authentication required |
+| 404 | Operation not found, does not belong to user, or no processing jobs exist |
+
+---
+
+## F. Extractions Module
+
+### 1. Get Operation Extraction
+
+- Endpoint: `GET /api/operations/:id/extraction`
+- Auth: yes
+- Purpose: Retrieve all extractions generated by the AI for a given operation.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Operation ID |
+
+Response (200):
+
+```json
+{
+  "success": true,
+  "message": "Extractions fetched successfully.",
+  "data": [
+    {
+      "id": "string",
+      "operationId": "string",
+      "processingJobId": "string",
+      "documentId": "string",
+      "documentType": "Commercial Invoice",
+      "confidence": 0.98,
+      "originalFields": {
+        "invoiceNumber": "INV-10001",
+        "containerNumber": "MSCU1234567"
+      },
+      "editedFields": null,
+      "rawResponse": null,
+      "status": "READY_FOR_REVIEW",
+      "approvedBy": null,
+      "approvedAt": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "version": 1,
+      "createdAt": "string",
+      "updatedAt": "string"
+    }
+  ]
+}
+```
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 400 | Invalid Operation ID format |
+| 401 | Authentication required |
+| 404 | Operation not found or does not belong to the user |
+
+### 2. Update Extraction
+
+- Endpoint: `PATCH /api/extractions/:id`
+- Auth: yes
+- Purpose: Update extracted fields manually.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Extraction ID |
+
+Body:
+
+```json
+{
+  "editedFields": {
+    "invoiceNumber": "INV-10002"
+  },
+  "reviewerNotes": "Fixed typo in invoice number."
+}
+```
+
+Response (200): Returns the updated extraction object.
+
+### 3. Approve Extraction
+
+- Endpoint: `POST /api/extractions/:id/approve`
+- Auth: yes
+- Purpose: Mark an extraction as approved, preventing further edits.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Extraction ID |
+
+Response (200): Returns the approved extraction object.
+
+### 4. Reject Extraction
+
+- Endpoint: `POST /api/extractions/:id/reject`
+- Auth: yes
+- Purpose: Mark an extraction as rejected.
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Extraction ID |
+
+Body:
+
+```json
+{
+  "reason": "Blurry document, cannot read."
+}
+```
+
+Response (200): Returns the rejected extraction object.
+
+### 5. Export Extraction to Excel
+
+- Endpoint: `POST /api/extractions/:id/export`
+- Auth: yes
+- Purpose: Generate and download an Excel workbook (`.xlsx`) containing the extraction's `editedFields` (falling back to `originalFields`).
+
+Path parameters:
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | string | Extraction ID |
+
+Response (200): Returns a raw binary Buffer of the Excel file.
+
+Headers included in the response:
+- `Content-Type`: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- `Content-Disposition`: `attachment; filename="TradeSift_Extraction_<id>.xlsx"`
+
+Error responses:
+
+| Status | Reason |
+|--------|--------|
+| 401 | Authentication required |
+| 404 | Extraction not found or parent operation does not belong to the user |
+| 409 | Extraction status is not `APPROVED` |

@@ -13,6 +13,8 @@ import {
 } from './operation.controller.js';
 import { upload } from '../../middleware/upload.middleware.js';
 import { createDocumentHandler, listDocumentsHandler } from '../documents/document.controller.js';
+import { startProcessingHandler, getOperationProcessingStatusHandler } from '../processing/processing.controller.js';
+import { getOperationExtractionHandler } from '../extractions/extraction.controller.js';
 import { MAX_UPLOAD_FILES } from '../documents/document.constants.js';
 
 const router = Router();
@@ -26,5 +28,12 @@ router.delete('/:id', requireAuth, validateParams(operationIdParamSchema), delet
 // Document endpoints nested under operation
 router.post('/:id/documents', requireAuth, validateParams(operationIdParamSchema), upload.array('files', MAX_UPLOAD_FILES), createDocumentHandler);
 router.get('/:id/documents', requireAuth, validateParams(operationIdParamSchema), listDocumentsHandler);
+
+// Processing endpoints nested under operation
+router.post('/:id/process', requireAuth, validateParams(operationIdParamSchema), startProcessingHandler);
+router.get('/:id/processing-status', requireAuth, validateParams(operationIdParamSchema), getOperationProcessingStatusHandler);
+
+// Extraction endpoints nested under operation
+router.get('/:id/extraction', requireAuth, validateParams(operationIdParamSchema), getOperationExtractionHandler);
 
 export default router;

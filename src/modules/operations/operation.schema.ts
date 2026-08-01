@@ -20,8 +20,8 @@ export type CreateOperationInput = z.infer<typeof createOperationSchema>;
 export const updateOperationSchema = z.object({
   referenceNo: z.string().trim().min(1, 'Reference number cannot be empty').optional(),
   notes: z.string().trim().optional(),
-  status: z.enum(['CANCELLED'], {
-    message: 'Status can only be set to CANCELLED',
+  status: z.enum(['PROCESSING', 'REVIEW', 'CANCELLED'], {
+    message: 'Status can only be set to PROCESSING, REVIEW, or CANCELLED',
   }).optional(),
 });
 

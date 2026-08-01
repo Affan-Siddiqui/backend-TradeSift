@@ -69,6 +69,14 @@ enum OperationStatus {
   CANCELLED
 }
 
+enum ExtractionStatus {
+  READY_FOR_REVIEW
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  EXPORTED
+}
+
 model Operation {
   id             String          @id @default(auto()) @map("_id") @db.ObjectId
   userId         String          @db.ObjectId
@@ -79,6 +87,7 @@ model Operation {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   documents      Document[]
+  processingJobs ProcessingJob[]
 }
 
 enum DocumentUploadStatus {
@@ -105,4 +114,55 @@ model Document {
   updatedAt        DateTime             @updatedAt
 
   operation        Operation            @relation(fields: [operationId], references: [id], onDelete: Cascade)
+}
+
+enum ProcessingStatus {
+  PENDING
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ProcessingJob {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  operationId    String           @db.ObjectId
+  userId         String           @db.ObjectId
+  status         ProcessingStatus @default(PENDING)
+  progress            Int              @default(0)
+  currentStage        String?
+  estimatedCompletion DateTime?
+  stages              Json?
+  startedAt           DateTime?
+  completedAt    DateTime?
+  failedAt       DateTime?
+  errorMessage   String?
+  retryCount     Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  operation      Operation        @relation(fields: [operationId], references: [id], onDelete: Cascade)
+}
+
+model Extraction {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  operationId     String   @db.ObjectId
+  processingJobId String   @db.ObjectId
+  documentId      String           @db.ObjectId
+  documentType    String
+  confidence      Float
+  originalFields  Json             @map("fields")
+  editedFields    Json?
+  rawResponse     Json?
+  status          ExtractionStatus @default(READY_FOR_REVIEW)
+  approvedBy      String?          @db.ObjectId
+  approvedAt      DateTime?
+  reviewedAt      DateTime?
+  reviewerNotes   String?
+  version         Int              @default(1)
+  lastExportedAt  DateTime?
+  exportCount     Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }

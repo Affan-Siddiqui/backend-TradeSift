@@ -8,6 +8,7 @@ export interface SafeDocument {
   originalFileName: string;
   mimeType: string;
   fileSize: number;
+  url: string;
   uploadStatus: DocumentUploadStatus;
   createdAt: Date;
   updatedAt: Date;
