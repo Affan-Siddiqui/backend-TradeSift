@@ -15,6 +15,7 @@ import { upload } from '../../middleware/upload.middleware.js';
 import { createDocumentHandler, listDocumentsHandler } from '../documents/document.controller.js';
 import { startProcessingHandler, getOperationProcessingStatusHandler } from '../processing/processing.controller.js';
 import { getOperationExtractionHandler } from '../extractions/extraction.controller.js';
+import { exportOperationHandler } from '../exports/export.controller.js';
 import { MAX_UPLOAD_FILES } from '../documents/document.constants.js';
 
 const router = Router();
@@ -35,5 +36,8 @@ router.get('/:id/processing-status', requireAuth, validateParams(operationIdPara
 
 // Extraction endpoints nested under operation
 router.get('/:id/extraction', requireAuth, validateParams(operationIdParamSchema), getOperationExtractionHandler);
+
+// Export endpoint nested under operation
+router.post('/:id/export', requireAuth, validateParams(operationIdParamSchema), exportOperationHandler);
 
 export default router;

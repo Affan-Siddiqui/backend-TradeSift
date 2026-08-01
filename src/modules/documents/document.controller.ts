@@ -1,3 +1,4 @@
+
 // document.controller.ts
 
 import type { Response, NextFunction } from 'express';
@@ -7,6 +8,7 @@ import type { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import {
   uploadDocuments,
   listOperationDocuments,
+  listAllUserDocuments,
   getDocument,
   deleteExistingDocument,
 } from './document.service.js';
@@ -37,6 +39,18 @@ export const listDocumentsHandler = async (req: AuthenticatedRequest, res: Respo
     const documents = await listOperationDocuments(req.userId, operationId);
 
     res.status(200).json(new ApiResponse('Documents fetched.', { documents }));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const listAllDocumentsHandler = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.userId) throw new ApiError(401, 'Authentication required.');
+
+    const documents = await listAllUserDocuments(req.userId);
+
+    res.status(200).json(new ApiResponse('All documents fetched.', { documents }));
   } catch (err) {
     next(err);
   }

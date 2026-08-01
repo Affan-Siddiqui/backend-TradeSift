@@ -7,10 +7,11 @@ import {
   findDocumentsByOperationId,
   findDocumentById,
   deleteDocumentById,
+  findAllDocumentsByUserId,
 } from './document.repository.js';
 import { findOperationById } from '../operations/operation.repository.js';
 import { StorageService } from '../../integrations/storage/storage.service.js';
-import type { SafeDocument } from './document.types.js';
+import type { SafeDocument, SafeDocumentWithOperation } from './document.types.js';
 import type { Document } from '@prisma/client';
 
 // ---------- Helpers ----------
@@ -102,6 +103,21 @@ export const listOperationDocuments = async (
   
   const documents = await findDocumentsByOperationId(operationId);
   return documents.map(toSafeDocument);
+};
+
+export const listAllUserDocuments = async (
+  userId: string
+): Promise<SafeDocumentWithOperation[]> => {
+  const documents = await findAllDocumentsByUserId(userId);
+  return documents.map(doc => ({
+    ...toSafeDocument(doc),
+    operation: {
+      id: doc.operation.id,
+      referenceNo: doc.operation.referenceNo,
+      operationType: doc.operation.operationType,
+      status: doc.operation.status,
+    }
+  }));
 };
 
 // ---------- Get One ----------

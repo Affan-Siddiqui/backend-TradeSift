@@ -5,6 +5,7 @@ import operationRoutes from '../modules/operations/operation.routes.js';
 import documentRoutes from '../modules/documents/document.routes.js';
 import extractionRoutes from '../modules/extractions/extraction.routes.js';
 import exportRoutes from '../modules/exports/export.routes.js';
+import dashboardRoutes from '../modules/dashboard/dashboard.routes.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/operations', operationRoutes);
 router.use('/documents', documentRoutes);
 router.use('/extractions', extractionRoutes);
 router.use('/extractions', exportRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 export default router;

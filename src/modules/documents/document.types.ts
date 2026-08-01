@@ -13,3 +13,12 @@ export interface SafeDocument {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface SafeDocumentWithOperation extends SafeDocument {
+  operation: {
+    id: string;
+    referenceNo: string | null;
+    operationType: string;
+    status: string;
+  };
+}

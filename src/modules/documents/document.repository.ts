@@ -40,6 +40,23 @@ export const findDocumentsByOperationId = async (operationId: string) => {
   });
 };
 
+export const findAllDocumentsByUserId = async (userId: string) => {
+  return prisma.document.findMany({
+    where: { userId },
+    include: {
+      operation: {
+        select: {
+          id: true,
+          referenceNo: true,
+          operationType: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
 export const findDocumentById = async (id: string) => {
   return prisma.document.findUnique({
     where: { id },
