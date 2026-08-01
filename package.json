@@ -8,7 +8,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "prisma:update": "prisma db push && prisma generate"
+    "prisma:update": "prisma db push && prisma generate",
+    "postinstall": "prisma generate"
   },
   "author": "Affan-Siddiqui",
   "license": "ISC",
