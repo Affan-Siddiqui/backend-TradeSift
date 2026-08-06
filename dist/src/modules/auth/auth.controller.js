@@ -185,6 +185,7 @@ export const refreshToken = async (req, res, next) => {
         res.status(200).json(new ApiResponse('Token refreshed.', null));
     }
     catch (err) {
+        clearAuthCookies(res);
         next(err);
     }
 };

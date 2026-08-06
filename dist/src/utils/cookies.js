@@ -20,7 +20,7 @@ export const setTrustedDeviceCookie = (res, id) => {
     res.cookie(COOKIE_NAMES.TRUSTED_DEVICE, id, { ...baseCookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 });
 };
 export const clearAuthCookies = (res) => {
-    res.clearCookie(COOKIE_NAMES.ACCESS);
-    res.clearCookie(COOKIE_NAMES.REFRESH);
+    res.clearCookie(COOKIE_NAMES.ACCESS, baseCookieOptions);
+    res.clearCookie(COOKIE_NAMES.REFRESH, baseCookieOptions);
 };
 //# sourceMappingURL=cookies.js.map

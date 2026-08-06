@@ -87,10 +87,105 @@ const recordOtpGeneration = async (email: string, type: CooldownType): Promise<v
 };
 
 const sendOtpEmail = async (email: string, otp: string): Promise<void> => {
+  const htmlTemplate = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeSift Verification</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #fafafa;
+    color: #171717;
+    margin: 0;
+    padding: 40px 20px;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  .logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo-text {
+    font-size: 24px;
+    font-weight: 700;
+    color: #171717;
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+  .title {
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #171717;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #737373;
+    text-align: center;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+  .otp-container {
+    background-color: #fafafa;
+    border: 1px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .otp-code {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: #171717;
+    margin: 0;
+  }
+  .footer {
+    font-size: 12px;
+    color: #a3a3a3;
+    text-align: center;
+    margin-top: 32px;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">c
+      <div class="logo-text">TradeSift</div>
+    </div>
+    <div class="title">Verify your identity</div>
+    <div class="subtitle">
+      You are receiving this email because a request was made to verify this email address. Please use the verification code below:
+    </div>
+    <div class="otp-container">
+      <p class="otp-code">${otp}</p>
+    </div>
+    <div class="subtitle" style="margin-bottom: 0;">
+      This code will expire in 5 minutes. If you didn't request this code, you can safely ignore this email.
+    </div>
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} TradeSift. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
   await sendMail(
     email,
-    'Your TradeSift verification code',
-    `<p>Your verification code is <b>${otp}</b>. It expires in 5 minutes.</p>`
+    'Your TradeSift Verification Code',
+    htmlTemplate
   );
 };
 

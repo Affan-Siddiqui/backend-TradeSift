@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+    import type { Response } from 'express';
 import { env } from '../config/env.js';
 
 const isProd = env.NODE_ENV === 'production';
@@ -28,6 +28,6 @@ export const setTrustedDeviceCookie = (res: Response, id: string): void => {
 };
 
 export const clearAuthCookies = (res: Response): void => {
-  res.clearCookie(COOKIE_NAMES.ACCESS);
-  res.clearCookie(COOKIE_NAMES.REFRESH);  
+  res.clearCookie(COOKIE_NAMES.ACCESS, baseCookieOptions);
+  res.clearCookie(COOKIE_NAMES.REFRESH, baseCookieOptions);  
 };
