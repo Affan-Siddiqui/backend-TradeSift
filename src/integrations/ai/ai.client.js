@@ -20,9 +20,9 @@ export class AIClient {
             const headers = {
                 'Content-Type': 'application/json',
             };
-            if (env.AI_BACKEND_API_KEY) {
-                headers['Authorization'] = `Bearer ${env.AI_BACKEND_API_KEY}`;
-            }
+            // if (env.AI_BACKEND_API_KEY) {
+            //     headers['Authorization'] = `Bearer ${env.AI_BACKEND_API_KEY}`;
+            // }
             const response = await fetch(`${env.AI_BACKEND_URL}/extract`, {
                 method: 'POST',
                 headers,
