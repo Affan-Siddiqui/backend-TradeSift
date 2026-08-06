@@ -13,11 +13,17 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(requestLogger);
 
-app.use (cors({
+app.use(cors({
   credentials: true,
-  origin: env.FRONTEND_URL || 'http://localhost:5173'
+  origin: function(origin, callback) {
+    const allowedOrigins = [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'];
+    if (!origin || allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 }));
-  
 app.use('/api', routes); 
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'Welcome to TradeSift Backend' });
