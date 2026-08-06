@@ -16,7 +16,10 @@ app.use(requestLogger);
 app.use(cors({
   credentials: true,
   origin: function(origin, callback) {
-    const allowedOrigins = [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'];
+    // Remove trailing slash from FRONTEND_URL if it exists
+    const frontendUrl = env.FRONTEND_URL?.endsWith('/') ? env.FRONTEND_URL.slice(0, -1) : env.FRONTEND_URL;
+    const allowedOrigins = [frontendUrl, 'http://localhost:5173', 'http://localhost:3000'];
+    
     if (!origin || allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
       callback(null, true);
     } else {
